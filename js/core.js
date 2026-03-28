@@ -102,3 +102,5 @@ function initApp(){
   if(typeof drawClock === 'function') drawClock();
   if(typeof updateClockLegend === 'function') updateClockLegend();
 }
+
+let currentTab = 'parcours';  // onglet actif — mis à jour par switchTab()

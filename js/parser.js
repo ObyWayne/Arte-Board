@@ -763,6 +763,12 @@ function handleXlsx(file, imageMap){
       currentSc=0;
       rebuildUI();
       render();
+      // Re-render l'onglet actif si différent de parcours
+      if(typeof currentTab !== 'undefined'){
+        if(currentTab==='terminus'   && typeof renderTerminus  ==='function') renderTerminus();
+        if(currentTab==='comparatif' && typeof renderComparatif==='function') renderComparatif();
+        if(currentTab==='synthese'   && typeof renderScorecard ==='function') renderScorecard();
+      }
       status.style.color='var(--green)';
       status.textContent=T('fileLoaded')+(LINE.meta.nomLigne||T('lineImported'));
       setTimeout(closeImport,1500);
@@ -944,6 +950,12 @@ async function handleZip(file){
     chargeActiveScenarios = null;
     rebuildUI();
     render();
+    // Re-render l'onglet actif si différent de parcours
+    if(typeof currentTab !== 'undefined'){
+      if(currentTab==='terminus'   && typeof renderTerminus  ==='function') renderTerminus();
+      if(currentTab==='comparatif' && typeof renderComparatif==='function') renderComparatif();
+      if(currentTab==='synthese'   && typeof renderScorecard ==='function') renderScorecard();
+    }
     status.style.color='var(--green)';
     status.textContent=`✓ ${scLabels.length} scénario(s) chargé(s) — ${LINE.meta.nomLigne||T('lineImported')}`;
     setTimeout(closeImport,1500);

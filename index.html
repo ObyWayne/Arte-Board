@@ -345,6 +345,9 @@ function switchTab(name) {
   if(pageSub) pageSub.style.display = (name === 'parcours') ? '' : 'none';
   if(scBar)   scBar.style.display   = (name === 'parcours' || name === 'terminus') ? '' : 'none';
 
+  // Track active tab
+  currentTab = name;
+
   // Trigger re-render only if fragments loaded and data present
   if(!_fragmentsReady) return;
 
