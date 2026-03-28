@@ -785,7 +785,35 @@ function handleXlsx(file, imageMap){
 //   master.xlsx       → META, POINTS_CLES
 //   *.xlsx (autres)   → 1 scénario chacun (nom fichier = label scénario)
 //   images/           → photos carousel
-//   marche_type/      → images marche type
+//   marche_type/      → Graphique CSV
+
+/* ── Parse un CSV marche type ── */
+function parseMTCsv(text){
+  if(!text || text.length < 10) return null;
+  const lines = text.split('\n');
+  if(lines.length < 3) return null;
+  const header = lines[0].split(',').map(h => h.trim());
+  const iPK = header.indexOf('PK');
+  const iT  = header.indexOf('T');
+  const iV2 = header.indexOf('V2');
+  if(iPK < 0 || iT < 0 || iV2 < 0){ console.warn('[MT CSV] colonnes PK/T/V2 introuvables'); return null; }
+  // Sous-échantillonnage : 0.05s × 20 = 1s de résolution (~1 800 pts pour 30 min)
+  const STEP = 20;
+  const pk = [], t = [], v2 = [];
+  for(let i = 1; i < lines.length; i += STEP){
+    if(!lines[i]) continue;
+    const row = lines[i].split(',');
+    const pkV = parseFloat(row[iPK]);
+    const tV  = parseFloat(row[iT]);
+    const v2V = parseFloat(row[iV2]);
+    if(!isNaN(pkV) && !isNaN(tV) && !isNaN(v2V)){
+      pk.push(pkV / 1000);   // m → km
+      t.push(tV);             // secondes
+      v2.push(v2V);           // km/h (déjà)
+    }
+  }
+  return t.length > 5 ? { pk, t, v2 } : null;
+}
 async function handleZip(file){
   const status=document.getElementById('importStatus');
   status.style.color='var(--text2)';
@@ -840,7 +868,15 @@ async function handleZip(file){
         }));
       }
     });
-
+// ── CSV marche type (MT/) ──
+    const csvMap = {};
+    zip.forEach((path, entry)=>{
+      const r = rel(path);
+      if(!entry.dir && /^MT\//i.test(r) && /\.csv$/i.test(r)){
+        const fname = r.replace(/^MT\//i,'');
+        imgPromises.push(entry.async('string').then(txt=>{ csvMap[fname]=txt; }));
+      }
+    });
     await Promise.all(imgPromises);
     GLOBAL_IMAGE_MAP = Object.assign({}, imageMap, mtImageMap);
     status.textContent = T('zipExtracted').replace('{n}', Object.keys(imageMap).length);
@@ -915,6 +951,8 @@ async function handleZip(file){
         detenteA:     tm.detenteA,
         detenteR:     tm.detenteR,
         infra:        infra_,
+        csvA:         parseMTCsv(csvMap[sc.mtA] || ''),
+        csvR:         parseMTCsv(csvMap[sc.mtR] || ''),
       });
       scenarios.push(sc);
 
@@ -1461,6 +1499,16 @@ function updateMTImage(){
   const img=document.getElementById('mtImg');
   const ph=document.getElementById('mtPlaceholder');
   const lbl=document.getElementById('mtSensLabel');
+
+  // ── Déléguer au graphique CSV si données disponibles ──
+  if(LINE && typeof renderMarcheType === 'function'){
+    const d = LINE.scenariosData ? LINE.scenariosData[currentSc] : null;
+    if(d && (currentDir==='aller' ? d.csvA : d.csvR)){
+      if(lbl) lbl.textContent = currentDir==='aller' ? `↓ ${T('dirOutbound')}` : `↑ ${T('dirInbound')}`;
+      renderMarcheType();
+      return;
+    }
+  }
 
   // Priorité : image du scénario courant > image META > rien
   const sc = LINE.scenarios[currentSc];
