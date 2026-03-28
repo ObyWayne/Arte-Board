@@ -1,0 +1,78 @@
+<!-- VUE : Comparatif -->
+<div class="page-view" id="view-comparatif">
+  <div class="comp-grid">
+    <!-- Radar -->
+    <div class="chart-card comp-radar-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compRadarTitle">Radar des indicateurs</div>
+        <button class="fs-btn" onclick="fsOpenRadar()" title="Plein écran">⛶</button>
+      </div>
+      <!-- Sélecteur scénarios -->
+      <div id="radarScSelector" style="display:flex;flex-wrap:wrap;gap:.35rem;padding:.3rem .5rem .1rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;min-height:28px;"></div>
+      <div style="display:flex;align-items:center;justify-content:center;height:240px">
+        <svg id="radarSvg" viewBox="0 0 320 280" style="width:100%;max-width:380px;height:240px;"></svg>
+      </div>
+    </div>
+    <!-- Matrice SP -->
+    <div class="chart-card comp-sp-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compSPTitle">Couverture des incidents par scénario SP</div>
+        <button class="fs-btn" onclick="fsOpenSP()" title="Plein écran">⛶</button>
+      </div>
+      <div class="sp-matrix-wrap">
+        <div id="spMatrixContainer"></div>
+      </div>
+    </div>
+    <!-- Tableau synthèse -->
+    <div class="chart-card comp-table-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
+        <div class="chart-card-title" id="compTableTitle" style="margin-bottom:0">Tableau synthèse</div>
+        <div style="display:flex;align-items:center;gap:.35rem;margin-left:auto;">
+          <div class="col-picker-wrap">
+            <button class="col-picker-btn" onclick="toggleColPicker(event)">⚙ Colonnes ▾</button>
+            <div class="col-picker-dropdown" id="colPickerDropdown"></div>
+          </div>
+          <button class="fs-btn" onclick="fsOpenCompTable()" title="Plein écran">⛶</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="compTable" class="comp-synth-table"></table>
+      </div>
+    </div>
+    <!-- Histogramme charges -->
+    <div class="chart-card comp-bubble-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compBubbleTitle">Montées / Descentes par station</div>
+        <button class="fs-btn" onclick="fsOpenCharge()" title="Plein écran">⛶</button>
+      </div>
+      <div id="chargeScSelector" style="display:flex;flex-wrap:wrap;gap:.35rem;padding:.3rem .5rem .1rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;min-height:28px;"></div>
+      <div style="overflow-x:auto;overflow-y:hidden;height:228px;">
+        <canvas id="chargeCanvas" style="display:block;height:228px;"></canvas>
+      </div>
+    </div>
+    <!-- Carte OpenStreetMap -->
+    <div class="chart-card comp-map-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compMapTitle">Carte du tracé</div>
+        <button class="fs-btn" onclick="fsOpenMap()" title="Plein écran">⛶</button>
+      </div>
+      <div class="map-container">
+        <div id="osmMap">
+          <div class="map-no-data">
+            <div class="map-no-data-icon">🗺️</div>
+            <div id="mapNoDataTxt">Chargez un fichier pour afficher le tracé</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Comparaison terminus -->
+    <div class="chart-card comp-terminus-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compTermTitle">Comparaison des temps au terminus</div>
+        <button class="fs-btn" onclick="fsOpenCompTerminus()" title="Plein écran">⛶</button>
+      </div>
+      <div id="compTermContent"><div style="color:var(--text3);font-size:.6rem;padding:.5rem;">—</div></div>
+    </div>
+  </div>
+</div>
+
