@@ -136,6 +136,12 @@ function closeFullscreen(){
 function _fsKeyHandler(e){ if(e.key==='Escape') closeFullscreen(); }
 
 function fsOpenMarcheType(){
+  // Cas 1 : graphique CSV → plein écran via render.marche.js
+  const canvas = document.getElementById('mtCanvas');
+  if(canvas && canvas.style.display !== 'none' && typeof fsOpenMarcheTypeCanvas === 'function'){
+    fsOpenMarcheTypeCanvas(canvas); return;
+  }
+  // Cas 2 : image PNG (comportement original)
   const img = document.getElementById('mtImg');
   if(!img || !img.src || img.style.display==='none') return;
   openFullscreen(document.getElementById('mtLabel').textContent, body => {
