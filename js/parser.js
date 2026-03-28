@@ -231,7 +231,10 @@ function fsOpenCharge(){
     wrap.appendChild(c2);
     body.appendChild(wrap);
     // Double RAF pour s'assurer que le canvas est dans le DOM et dimensionné
-    requestAnimationFrame(()=>requestAnimationFrame(()=> renderChargeChartOnCanvas(c2, availW, availH)));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>
+      renderChargeChartOnCanvas(c2, availW, availH,
+        window._lastChargeAll||[], window._lastChargeFiltered||[])
+    ));
   });
 }
 
@@ -493,6 +496,26 @@ function fsOpenTermHisto(svgHtml, title){
 /* ── OpenStreetMap (Leaflet) ── */
 let _map = null;
 let _lastRadarAll = [], _lastRadarFiltered = [];
+let _mapTileLayer    = 'standard';  // tuile active
+let _mapTileLayerObj = null;         // référence Leaflet
+
+const _MAP_TILES = {
+  standard:  { url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                                                   attr:'© OpenStreetMap' },
+  satellite: { url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',         attr:'© Esri World Imagery' },
+  transport: { url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',                              attr:'© CartoDB' },
+};
+
+function setMapTile(type){
+  _mapTileLayer = type;
+  document.querySelectorAll('.map-tile-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tile===type);
+  });
+  if(!_map) return;
+  if(_mapTileLayerObj) _map.removeLayer(_mapTileLayerObj);
+  const t = _MAP_TILES[type] || _MAP_TILES.standard;
+  _mapTileLayerObj = L.tileLayer(t.url, {maxZoom:19, attribution:t.attr});
+  _mapTileLayerObj.addTo(_map);
+}
 let _mapLayers = {route: null, markers: null, geojson: null};
 let _mapGeoJSON = null; // stocke le GeoJSON chargé depuis le ZIP
 
@@ -502,10 +525,8 @@ function initMap(){
   if(!el) return;
   el.innerHTML = '';
   _map = L.map('osmMap', {zoomControl:true, attributionControl:true});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  }).addTo(_map);
+  const _t0 = _MAP_TILES[_mapTileLayer] || _MAP_TILES.standard;
+  _mapTileLayerObj = L.tileLayer(_t0.url, {maxZoom:19, attribution:_t0.attr}).addTo(_map);
   _map.setView([46.5, 2.3], 6); // France par défaut
 }
 
@@ -639,7 +660,8 @@ function fsOpenMap(){
     // Attend que le DOM soit rendu avant d'init Leaflet
     setTimeout(()=>{
       const fsMap = L.map('osmMapFs', {zoomControl:true, attributionControl:true});
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(fsMap);
+     const _ft = _MAP_TILES[_mapTileLayer] || _MAP_TILES.standard;
+      L.tileLayer(_ft.url, {maxZoom:19, attribution:_ft.attr}).addTo(fsMap);
       const col = BRAND.primaire1 || '#a06bff';
       if(LINE && LINE.stations){
         const pts = LINE.stations
