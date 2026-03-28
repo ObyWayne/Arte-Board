@@ -40,7 +40,7 @@ function computeKPIsAll(){
       results.push({...k, sc, scIdx:i, tPrioA, tPrioR, tPrioTotal:tPrioA+tPrioR,
                     moyMontees, moyDescentes, nStations, distInterMoy});
     } catch(e){
-      console.warn(`computeKPIsAll: erreur scénario ${i} (${sc.id})`, e);
+      console.error(`[computeKPIsAll] erreur scénario ${i} (${sc?.id}):`, e);
     }
   });
 
@@ -57,8 +57,10 @@ function computeKPIsAll(){
 }
 
 function renderComparatif(){
-  if(!LINE) return;
-  const all = computeKPIsAll();
+  if(!LINE){ console.warn('[renderComparatif] LINE is null'); return; }
+  let all;
+  try { all = computeKPIsAll(); } catch(e){ console.error('[renderComparatif] computeKPIsAll threw:', e); return; }
+  console.log('[renderComparatif] all.length =', all.length, '| scenarios =', LINE.scenarios.length);
   if(all.length === 0){
     document.getElementById('radarScSelector').innerHTML  = '';
     document.getElementById('chargeScSelector').innerHTML = '';
@@ -97,11 +99,11 @@ function renderComparatif(){
   const radarFiltered  = all.filter((_,i)=>radarActiveScenarios.has(i));
   const chargeFiltered = all.filter((_,i)=>chargeActiveScenarios.has(i));
 
-  renderRadar(all, radarFiltered);
-  renderChargeChart(all, chargeFiltered);
-  renderCompTable(all);
-  renderSPMatrix();
-  renderCompTerminus(all);
+  try { renderRadar(all, radarFiltered); } catch(e){ console.error('[renderComparatif] renderRadar:', e); }
+  try { renderChargeChart(all, chargeFiltered); } catch(e){ console.error('[renderComparatif] renderChargeChart:', e); }
+  try { renderCompTable(all); } catch(e){ console.error('[renderComparatif] renderCompTable:', e); }
+  try { renderSPMatrix(); } catch(e){ console.error('[renderComparatif] renderSPMatrix:', e); }
+  try { renderCompTerminus(all); } catch(e){ console.error('[renderComparatif] renderCompTerminus:', e); }
 }
 
 function toggleRadarSc(idx){
