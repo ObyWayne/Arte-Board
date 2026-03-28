@@ -261,10 +261,337 @@
   <!-- VUE : Temps de parcours -->
 
   <!-- VIEW CONTAINER — fragments loaded here -->
-  <div id="view-parcours"   class="page-view active"></div>
-  <div id="view-terminus"   class="page-view"></div>
-  <div id="view-comparatif" class="page-view"></div>
-  <div id="view-synthese"   class="page-view"></div>
+  <div id="view-parcours" class="page-view active">
+<div class="page-view active" id="view-parcours">
+
+  <!-- KPI BANNER — 7 colonnes × 2 lignes -->
+  <div class="kpi-banner">
+
+    <!-- A1 : Flotte nécessaire -->
+    <div class="kpi-card kpi-A1" style="--kpi-color:var(--green)">
+      <div class="kpi-label" id="kpiLabelFlotte">Flotte<br>nécessaire</div>
+      <div class="kpi-value" id="kpiFlotte">—</div>
+      <div class="kpi-sub" id="kpiFlotteSub"></div>
+    </div>
+
+    <!-- B1 : Flotte totale -->
+    <div class="kpi-card kpi-B1" style="--kpi-color:var(--green)">
+      <div class="kpi-label" id="kpiLabelFlotteTot">Flotte<br>totale</div>
+      <div class="kpi-value" id="kpiFlotteTot">—</div>
+      <div class="kpi-sub" id="kpiFlotteTotSub"></div>
+    </div>
+
+    <!-- A2 : Vit. commerciale Aller -->
+    <div class="kpi-card kpi-A2" style="--kpi-color:var(--blue)">
+      <div class="kpi-label" id="kpiLabelVitA">Comm. Speed<br>↓ Aller</div>
+      <div class="kpi-value" id="kpiVitA">—</div>
+      <div class="kpi-sub" id="kpiVitASub"></div>
+    </div>
+
+    <!-- B2 : Vit. commerciale Retour -->
+    <div class="kpi-card kpi-B2" style="--kpi-color:var(--orange)">
+      <div class="kpi-label" id="kpiLabelVitR">Comm. Speed<br>↑ Retour</div>
+      <div class="kpi-value" id="kpiVitR">—</div>
+      <div class="kpi-sub" id="kpiVitRSub"></div>
+    </div>
+
+    <!-- C : Cycle complet + Taux d'occupation terminus -->
+    <div class="kpi-card kpi-C" style="--kpi-color:var(--pink);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.15rem;">
+        <div class="kpi-label" id="kpiCycleLabel" style="margin-bottom:0">Cycle complet</div>
+        <button class="fs-btn" onclick="toggleOccupPct()" id="occupPctBtn" title="Basculer %/mm:ss">%</button>
+      </div>
+      <div class="kpi-center">
+        <div class="kpi-value" id="kpiCycle" class="kpi-center">—</div>
+        <div class="kpi-sub" id="kpiCycleSub" class="kpi-sub kpi-center"></div>
+      </div>
+      <hr class="kpi-divider kpi-divider-flush">
+      <div class="kpi-occup-row">
+        <div class="kpi-occup-cell">
+          <div class="kpi-label" id="kpiOccupALabel" class="kpi-occup-label"></div>
+          <div class="kpi-value" id="kpiOccupA" class="kpi-occup-val">—</div>
+          <div class="kpi-sub" id="kpiOccupASub" class="kpi-sub kpi-center"></div>
+        </div>
+        <div class="kpi-occup-sep"></div>
+        <div class="kpi-occup-cell">
+          <div class="kpi-label" id="kpiOccupRLabel" class="kpi-occup-label"></div>
+          <div class="kpi-value" id="kpiOccupR" class="kpi-occup-val">—</div>
+          <div class="kpi-sub" id="kpiOccupRSub" class="kpi-sub kpi-center"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D1 : Fréquence HP -->
+    <!-- D1 : Mouvements dépôt -->
+    <div class="kpi-card kpi-D1" style="--kpi-color:var(--purple)">
+      <div class="kpi-label" id="kpiLabelDepot">Mouvements dépôt</div>
+      <div class="kpi-depot-values">
+        <span class="kpi-depot-lbl" id="kpiLabelSorties">↑ Sorties</span>
+        <span id="kpiDepotSorties" class="kpi-depot-num" style="color:var(--purple)">—</span>
+        <span class="kpi-depot-sep">/</span>
+        <span class="kpi-depot-lbl" id="kpiLabelRentrees">↓ Rentrées</span>
+        <span id="kpiDepotEntrees" class="kpi-depot-num" style="color:var(--purple3)">—</span>
+      </div>
+      <hr class="kpi-divider kpi-divider-flush">
+      <div id="kpiDepotDetail" class="kpi-depot-detail"></div>
+    </div>
+
+
+    <!-- E:F — Horloge analogique 24h avec plages HP/HC -->
+    <div class="kpi-card kpi-clock" style="--kpi-color:var(--purple);">
+      <div class="kpi-label" id="clockCardLabel">Plages horaires</div>
+      <div class="kpi-clock-inner" style="flex:1;min-height:0;">
+        <!-- SVG — prend toute la hauteur disponible côté gauche -->
+        <div class="clock-svg-wrap">
+          <svg id="clockSvg" viewBox="0 0 200 200" style="width:100%;height:100%;display:block;"></svg>
+        </div>
+        <!-- Légende + fréq côté droit -->
+        <div class="clock-right">
+          <!-- Fréq cible HP — intégrée dans la légende -->
+          <div class="clock-freq-block">
+            <div style="font-size:.48rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);font-family:var(--fontb)" id="clockFreqHPLabel">Fréq. cible HP</div>
+            <div style="display:flex;align-items:baseline;gap:.25rem;margin-top:.1rem;">
+              <span id="clockFreqHP" style="font-size:1.2rem;font-weight:800;color:var(--purple);font-family:var(--fontb);line-height:1">— min</span>
+              <span style="font-size:.52rem;color:var(--text3);font-family:var(--fontb)" id="clockFreqHPVeh"></span>
+            </div>
+          </div>
+          <div class="clock-leg-divider"></div>
+          <div class="clock-legend" id="clockLegend">
+            <div class="clock-leg-item">
+              <div class="clock-leg-dot" style="background:var(--purple)"></div>
+              <span id="clockLegHPLabel" style="font-weight:600">Heure de Pointe</span>
+              <span id="clockLegHP" style="font-weight:800;color:var(--purple);margin-left:.2rem"></span>
+            </div>
+            <div id="clockLegHCItems"></div>
+            <div class="clock-leg-item">
+              <div class="clock-leg-dot" style="background:var(--bg4);border:1px solid var(--border2)"></div>
+              <span id="clockLegHSLabel">Hors service</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- G : Courses/jour + Km commerciaux/jour -->
+    <div class="kpi-card kpi-G" style="--kpi-color:var(--red)">
+      <div class="kpi-label" id="kpiLabelCourses">Courses / jour</div>
+      <div class="kpi-value" id="kpiCourses">—</div>
+      <div class="kpi-sub" id="kpiCoursesSub"></div>
+      <hr class="kpi-divider">
+      <div class="kpi-label" id="kpiLabelKmCom">Km commerciaux / jour</div>
+      <div class="kpi-value" id="kpiKmCom">—</div>
+      <div class="kpi-sub" id="kpiKmComSub"></div>
+    </div>
+
+  </div>
+
+  <!-- OUTER LAYOUT -->
+  <div class="outer-layout">
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+
+      <!-- MARCHE TYPE -->
+      <div class="mt-card" id="mtCard">
+        <div class="mt-sens-label" id="mtSensLabel">↓ Aller</div>
+        <div class="mt-placeholder" id="mtPlaceholder">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <rect x="2" y="2" width="36" height="36" rx="4" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 2"/>
+            <path d="M14 26 L20 14 L26 26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="20" cy="11" r="2" fill="currentColor" opacity=".5"/>
+          </svg>
+          <span id="mtLabel">Image de marche type</span>
+          <span id="mtSub" style="font-size:.52rem;opacity:.6">Disponible via le fichier Excel</span>
+          <button class="fs-btn" onclick="fsOpenMarcheType()" title="Plein écran">⛶</button>
+        </div>
+        <img id="mtImg" src="" style="display:none;" alt="Marche type">
+      </div>
+
+
+      <!-- CHARTS -->
+      <div class="chart-card" id="bopCard"></div>
+
+      <div class="chart-card" id="cycleCard"></div>
+
+      <!-- CAROUSEL -->
+      <div class="chart-card carousel-card">
+        <div class="carousel-header">
+          <div class="chart-card-title" id="carouselTitle" style="margin-bottom:0">Points clés du réseau</div>
+          <div class="carousel-dots" id="carouselDots"></div>
+        </div>
+        <div class="carousel-viewport" id="carouselViewport">
+          <div class="carousel-track" id="carouselTrack">
+            <!-- slides injectées dynamiquement -->
+          </div>
+          <!-- État vide -->
+          <div class="carousel-empty" id="carouselEmpty">
+            <div class="carousel-empty-icon">🖼</div>
+            <div class="carousel-empty-txt" id="carouselEmpty">Aucun contenu — importez un fichier Excel<br>avec un onglet <strong>CAROUSEL</strong></div>
+          </div>
+        </div>
+        <div class="carousel-nav">
+          <button class="carousel-btn" id="carouselPrev" onclick="carouselMove(-1)">&#8592;</button>
+          <span class="carousel-counter" id="carouselCounter"></span>
+          <button class="carousel-btn" id="carouselNext" onclick="carouselMove(+1)">&#8594;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL : schema + table -->
+    <div class="layout">
+      <div class="schema-col">
+        <div class="schema-dir-btns">
+          <button class="fs-btn schema-fs-btn-top" onclick="fsOpenSchema()" title="Plein écran">⛶</button>
+          <div class="schema-dir-stack">
+            <button class="dir-btn dir-btn-aller active" id="dirBtnA" onclick="setDirection('aller')">
+              <span id="dirLabelA">↓ Aller</span>
+            </button>
+            <button class="dir-btn dir-btn-retour" id="dirBtnR" onclick="setDirection('retour')">
+              <span id="dirLabelR">↑ Retour</span>
+            </button>
+          </div>
+        </div>
+        <svg class="schema-svg" id="schemaSvg"></svg>
+      </div>
+      <div class="table-col">
+        <table>
+          <thead>
+            <tr class="th-top">
+              <th rowspan="2" style="text-align:center;min-width:140px">
+                <span id="thStop">Station</span>
+              </th>
+              <th colspan="2" id="thDistances">Distances</th>
+              <th colspan="2" id="thRuntime">Temps de parcours</th>
+              <th rowspan="2" id="thDwell">Arrêt<br><span style="font-size:.5rem;color:var(--text3)">(mm:ss)</span></th>
+              <th rowspan="2" id="thArrival">Arrivée<br><span style="font-size:.5rem;color:var(--text3)">(mm:ss)</span></th>
+              <th rowspan="2" id="thDeparture">Départ<br><span style="font-size:.5rem;color:var(--text3)">(mm:ss)</span></th>
+            </tr>
+            <tr class="th-bot">
+              <th id="thSpacing">Interstation<br>(m)</th>
+              <th id="thCumul">Cumulée<br>(km)</th>
+              <th id="thRunTendu">Marche<br>tendue</th>
+              <th id="thRecovery">Détente<br>10%</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div><!-- end view-parcours -->
+</div>
+  <div id="view-terminus" class="page-view">
+<div class="page-view" id="view-terminus">
+  <div id="terminusContent"></div>
+</div>
+</div>
+  <div id="view-comparatif" class="page-view">
+<!-- VUE : Comparatif -->
+<div class="page-view" id="view-comparatif">
+  <div class="comp-grid">
+    <!-- Radar -->
+    <div class="chart-card comp-radar-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compRadarTitle">Radar des indicateurs</div>
+        <button class="fs-btn" onclick="fsOpenRadar()" title="Plein écran">⛶</button>
+      </div>
+      <!-- Sélecteur scénarios -->
+      <div id="radarScSelector" style="display:flex;flex-wrap:wrap;gap:.35rem;padding:.3rem .5rem .1rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;min-height:28px;"></div>
+      <div style="display:flex;align-items:center;justify-content:center;height:240px">
+        <svg id="radarSvg" viewBox="0 0 320 280" style="width:100%;max-width:380px;height:240px;"></svg>
+      </div>
+    </div>
+    <!-- Matrice SP -->
+    <div class="chart-card comp-sp-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compSPTitle">Couverture des incidents par scénario SP</div>
+        <button class="fs-btn" onclick="fsOpenSP()" title="Plein écran">⛶</button>
+      </div>
+      <div class="sp-matrix-wrap">
+        <div id="spMatrixContainer"></div>
+      </div>
+    </div>
+    <!-- Tableau synthèse -->
+    <div class="chart-card comp-table-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
+        <div class="chart-card-title" id="compTableTitle" style="margin-bottom:0">Tableau synthèse</div>
+        <div style="display:flex;align-items:center;gap:.35rem;margin-left:auto;">
+          <div class="col-picker-wrap">
+            <button class="col-picker-btn" onclick="toggleColPicker(event)">⚙ Colonnes ▾</button>
+            <div class="col-picker-dropdown" id="colPickerDropdown"></div>
+          </div>
+          <button class="fs-btn" onclick="fsOpenCompTable()" title="Plein écran">⛶</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="compTable" class="comp-synth-table"></table>
+      </div>
+    </div>
+    <!-- Histogramme charges -->
+    <div class="chart-card comp-bubble-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compBubbleTitle">Montées / Descentes par station</div>
+        <button class="fs-btn" onclick="fsOpenCharge()" title="Plein écran">⛶</button>
+      </div>
+      <div id="chargeScSelector" style="display:flex;flex-wrap:wrap;gap:.35rem;padding:.3rem .5rem .1rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;min-height:28px;"></div>
+      <div style="overflow-x:auto;overflow-y:hidden;height:228px;">
+        <canvas id="chargeCanvas" style="display:block;height:228px;"></canvas>
+      </div>
+    </div>
+    <!-- Carte OpenStreetMap -->
+    <div class="chart-card comp-map-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compMapTitle">Carte du tracé</div>
+        <button class="fs-btn" onclick="fsOpenMap()" title="Plein écran">⛶</button>
+      </div>
+      <div class="map-container">
+        <div id="osmMap">
+          <div class="map-no-data">
+            <div class="map-no-data-icon">🗺️</div>
+            <div id="mapNoDataTxt">Chargez un fichier pour afficher le tracé</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Comparaison terminus -->
+    <div class="chart-card comp-terminus-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compTermTitle">Comparaison des temps au terminus</div>
+        <button class="fs-btn" onclick="fsOpenCompTerminus()" title="Plein écran">⛶</button>
+      </div>
+      <div id="compTermContent"><div style="color:var(--text3);font-size:.6rem;padding:.5rem;">—</div></div>
+    </div>
+  </div>
+</div>
+</div>
+  <div id="view-synthese" class="page-view">
+<div class="page-view" id="view-synthese">
+  <!-- SCORECARD GLOBAL -->
+  <div class="synth-section">
+    <div class="synth-title" id="synthScorecardTitle">Scorecard global</div>
+    <div class="scorecard-wrap">
+      <!-- Score global -->
+      <div class="scorecard-global">
+        <div class="scorecard-global-stars" id="scGlobalStars"></div>
+        <div class="scorecard-global-label">
+          <span class="scorecard-global-num" id="scGlobalNum">—</span>
+          <span class="scorecard-global-denom">/5</span>
+          <span class="scorecard-global-text" id="scGlobalLabel">GLOBAL</span>
+        </div>
+      </div>
+      <!-- Critères -->
+      <div class="scorecard-criteria" id="scorecardCriteria"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end main -->
+
+<div class="footer">
+  <span id="footerLeft"></span>
+  <span id="footerLine"></span>
+  <span class="confidential">Confidentiel</span>
+</div>
+</div>
 
 </div><!-- end .main -->
 
@@ -282,49 +609,12 @@
 
 <!-- Fragment loader -->
 <script>
-/* ── Fragment loader + switchTab ─────────────────────────
-   All 4 fragments are pre-loaded at startup into their
-   respective #view-XXX divs. The page-view CSS keeps them
-   hidden until switchTab() makes one active.
-   
-   ⚠️ TODO-VERIFY: file:// protocol blocks fetch().
-      Run via: python3 -m http.server 8080
-      or deploy to GitHub Pages.
-──────────────────────────────────────────────────────── */
-
-const _viewFiles = {
-  'parcours':   'views/parcours.html',
-  'terminus':   'views/terminus.html',
-  'comparatif': 'views/comparatif.html',
-  'synthese':   'views/synthese.html',
-};
 let _fragmentsReady = false;
 
-async function loadAllFragments() {
-  // Try fetch — works on HTTP(S), fails on file://
-  try {
-    await Promise.all(Object.entries(_viewFiles).map(async ([name, url]) => {
-      const r   = await fetch(url);
-      const html = await r.text();
-      const el  = document.getElementById('view-' + name);
-      if(el) el.innerHTML = html;
-    }));
-    _fragmentsReady = true;
-    if(typeof initApp === 'function') initApp();
-  } catch(e) {
-    console.error('Fragment fetch failed — are you on HTTP?', e);
-    // Show user-friendly message
-    document.querySelector('.main').innerHTML =
-      `<div style="padding:3rem;text-align:center;font-family:sans-serif;color:#aaa;">
-        <div style="font-size:2rem;margin-bottom:1rem;">⚠️</div>
-        <div style="font-size:1rem;font-weight:700;color:#e8eaf0;margin-bottom:.5rem;">
-          Serveur HTTP requis</div>
-        <div style="font-size:.8rem;">
-          Lancez : <code>python3 -m http.server 8080</code><br>
-          puis ouvrez <a href="http://localhost:8080" style="color:#a06bff;">http://localhost:8080</a>
-        </div>
-      </div>`;
-  }
+function loadAllFragments() {
+  // Fragments already inlined — works on file:// and GitHub Pages without a server
+  _fragmentsReady = true;
+  if(typeof initApp === 'function') initApp();
 }
 
 /* switchTab — appelé par les boutons de nav */
