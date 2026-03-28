@@ -337,10 +337,11 @@ function renderRadar(all, filtered){
 }
 
 /* ── HISTOGRAMME CHARGES (barres superposées) ── */
-/* ── HISTOGRAMME CHARGES (barres superposées) ── */
 function renderChargeChart(all, filtered){
   const canvas = document.getElementById('chargeCanvas');
   if(!canvas) return;
+  window._lastChargeAll      = all;
+  window._lastChargeFiltered = filtered;
   renderChargeChartOnCanvas(canvas, null, null, all, filtered);
 }
 
@@ -393,14 +394,19 @@ function renderChargeChartOnCanvas(canvas, forcedW, forcedH, all, filtered){
   const bH=v=>(v/yMax)*PH;
 
   // Grille Y
+  // Grille Y
+  const _hasAxisCvs = !!document.getElementById('chargeAxisCanvas');
   ctx.lineWidth=.7;
   for(let t=0;t<=5;t++){
     const v=yMax/5*t, y=py(v);
     ctx.strokeStyle='rgba(160,160,200,.12)';
     ctx.beginPath(); ctx.moveTo(PAD.l,y); ctx.lineTo(W-PAD.r,y); ctx.stroke();
-    ctx.fillStyle='rgba(180,190,220,.55)';
-    ctx.font='600 11px "Barlow Condensed",sans-serif'; ctx.textAlign='right';
-    ctx.fillText(Math.round(v),PAD.l-4,y+3);
+    // Labels Y : dessinés sur le canvas principal seulement s'il n'y a pas de canvas axe séparé
+    if(!_hasAxisCvs){
+      ctx.fillStyle='rgba(180,190,220,.55)';
+      ctx.font='600 11px "Barlow Condensed",sans-serif'; ctx.textAlign='right';
+      ctx.fillText(Math.round(v),PAD.l-4,y+3);
+    }
   }
 
   stationOrder.forEach((nom,si)=>{
@@ -465,8 +471,32 @@ function renderChargeChartOnCanvas(canvas, forcedW, forcedH, all, filtered){
     ctx.fillStyle=col+'dd'; ctx.fillRect(lx,legY-7,10,7);
     ctx.fillStyle='rgba(180,190,220,.85)'; ctx.fillText(k.sc.label,lx+13,legY);
   });
+   // ── Axe Y sur canvas séparé (sticky) ──
+  _renderChargeYAxis(PAD, H, PH, yMax, py, dpr);
 }
 
+function _renderChargeYAxis(PAD, H, PH, yMax, py, dpr){
+  const axisCanvas = document.getElementById('chargeAxisCanvas');
+  if(!axisCanvas) return;
+  const AW = PAD.l + 2;
+  axisCanvas.width  = Math.round(AW * dpr);
+  axisCanvas.height = Math.round(H  * dpr);
+  axisCanvas.style.width  = AW + 'px';
+  axisCanvas.style.height = H  + 'px';
+  const axCtx = axisCanvas.getContext('2d');
+  axCtx.scale(dpr, dpr);
+  axCtx.clearRect(0, 0, AW, H);
+  const bgCol = getComputedStyle(document.body).getPropertyValue('--bg2').trim() || '#1f2435';
+  axCtx.fillStyle = bgCol; axCtx.fillRect(0, 0, AW, H);
+  for(let t=0; t<=5; t++){
+    const v = yMax/5*t, y = py(v);
+    axCtx.fillStyle = 'rgba(180,190,220,.55)';
+    axCtx.font = '600 11px "Barlow Condensed",sans-serif'; axCtx.textAlign = 'right';
+    axCtx.fillText(Math.round(v), PAD.l-4, y+3);
+  }
+  axCtx.strokeStyle = 'rgba(160,160,200,.2)'; axCtx.lineWidth = 1;
+  axCtx.beginPath(); axCtx.moveTo(AW-1, PAD.t); axCtx.lineTo(AW-1, PAD.t+PH); axCtx.stroke();
+}
 
 
 /* ── TABLEAU SYNTHÈSE ── */
@@ -832,7 +862,7 @@ function fsOpenCompTerminus(){
   openFullscreen(document.getElementById('compTermTitle').textContent,body=>{
     Object.assign(body.style,{overflow:'auto',alignItems:'flex-start',padding:'1.5rem'});
     const clone=el.cloneNode(true);
-    clone.style.cssText='width:100%;';
+    clone.style.cssText = 'width:calc(100vw - 3rem);overflow:visible;';
     body.appendChild(clone);
   });
 }
@@ -855,11 +885,12 @@ function renderCompTable(all){
     const vs = all.map(k=>k[c.key]||0);
     return c.higher ? Math.min(...vs) : Math.max(...vs);
   });
-  let html = `<thead><tr><th>${isEN?'Scenario':'Scénario'}</th>${COLS.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead><tbody>`;
+  const STK = 'position:sticky;left:0;z-index:2;background:var(--bg2)';
+  let html = `<thead><tr><th style="${STK};z-index:3;">${isEN?'Scenario':'Scénario'}</th>${COLS.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead><tbody>`;
   all.forEach((k,si)=>{
     const isActive = si===currentSc;
     html += `<tr class="${isActive?'active-sc':''}">`;
-    html += `<td>${k.sc.label}</td>`;
+    html += `<td style="position:sticky;left:0;z-index:1;background:var(--bg2);font-weight:700;">${k.sc.label}</td>`;
     COLS.forEach((c,ci)=>{
       const v = k[c.key]||0;
       const cls = v===best[ci]?'best':v===worst[ci]&&all.length>1?'worst':'';
