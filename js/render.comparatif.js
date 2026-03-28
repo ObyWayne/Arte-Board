@@ -872,9 +872,7 @@ function renderCompTable(all){
 }
 
 
-let currentTab = 'parcours';
-
-// switchTab() moved to index.html — ⚠️ TODO-VERIFY
+// currentTab declared in core.js
 
 
 /* ═══════════════════════════════════════════════
