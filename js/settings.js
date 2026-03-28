@@ -59,6 +59,8 @@ function toggleDark(){
   updateClockLegend();
   document.getElementById('darkBtn').textContent=isDark?'🌙 Dark':'☀️ Light';
   document.getElementById('darkBtn').classList.toggle('active',!isDark);
+  // Redessiner le canvas marche type si actif
+  if(LINE && typeof renderMarcheType === 'function') renderMarcheType();
 }
 
 /* ── Dictionnaire bilingue ── */
