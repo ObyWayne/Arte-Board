@@ -491,7 +491,6 @@ function renderChargeChartOnCanvas(canvas, forcedW, forcedH, all, filtered){
   });
    // ── Axe Y sur canvas séparé (sticky) ──
   _renderChargeYAxis(PAD, H, PH, yMax, py, dpr);
-}
 
 function _renderChargeYAxis(PAD, H, PH, yMax, py, dpr){
   const axisCanvas = document.getElementById('chargeAxisCanvas');
