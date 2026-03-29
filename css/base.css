@@ -90,19 +90,19 @@ body.light-mode{--bg:#e8eaed;--bg2:#dfe1e6;--bg3:#d4d7dd;--bg4:#c8ccd4;--border:
 /* COMPARATIF */
 /* Vue comparatif : hauteur = écran moins topbar/tabs */
 #view-comparatif.active{height:calc(100vh - 132px);overflow-y:auto;}
-.comp-grid{display:grid;grid-template-columns:3fr 1fr 2fr;grid-template-rows:auto minmax(0,1fr) minmax(0,1fr) auto;gap:.75rem;margin-top:.25rem;height:100%;}
-.comp-table-card   {grid-column:1/-1; grid-row:1;}
-.comp-bubble-card  {grid-column:1;    grid-row:2; display:flex;flex-direction:column;}
-.comp-radar-card   {grid-column:2;    grid-row:2; display:flex;flex-direction:column;}
-.comp-map-card     {grid-column:3;    grid-row:2/4;display:flex;flex-direction:column;}
-.comp-sp-card      {grid-column:1/3;  grid-row:3; display:flex;flex-direction:column;}
-.comp-terminus-card{grid-column:1/-1; grid-row:4;}
+.comp-grid{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:auto auto auto auto;gap:.75rem;margin-top:.25rem;width:100%;}
+.comp-table-card   {grid-column:1/-1;grid-row:1;}
+.comp-bubble-card  {grid-column:1;   grid-row:2;min-width:0;}
+.comp-radar-card   {grid-column:2;   grid-row:2;min-width:0;}
+.comp-map-card     {grid-column:3;   grid-row:2/4;display:flex;flex-direction:column;min-width:0;}
+.comp-sp-card      {grid-column:1/3; grid-row:3;min-width:0;}
+.comp-terminus-card{grid-column:1/-1;grid-row:4;min-width:0;}
 .term-cmp-table{width:100%;border-collapse:collapse;}
 .term-cmp-table th{font-size:.52rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);font-family:var(--fontb);padding:.3rem .5rem;border-bottom:2px solid var(--border);text-align:center;}
 .term-cmp-table th.row-hdr{text-align:left;}
 .term-cmp-table td{border-bottom:1px solid var(--border);vertical-align:middle;}
-.comp-map-card .map-container{flex:1;min-height:0;border-radius:4px;overflow:hidden;}
-.comp-map-card .map-container #osmMap{width:100%;height:100%;min-height:300px;}
+.comp-map-card .map-container{flex:1;min-height:0;border-radius:4px;overflow:hidden;min-height:200px;}
+.comp-map-card .map-container #osmMap{width:100%;height:100%;min-height:200px;}
 /* Charge chart : axe Y fixe + scroll horizontal */
 .comp-bubble-card .chart-scroll-area{flex:1;display:flex;min-height:0;}
 /* SP : scroll interne seulement */
@@ -122,13 +122,25 @@ body.light-mode{--bg:#e8eaed;--bg2:#dfe1e6;--bg3:#d4d7dd;--bg4:#c8ccd4;--border:
 .radar-sc-btn.on{opacity:1;}
 .comp-synth-table{width:100%;border-collapse:collapse;font-family:var(--font);font-size:.6rem;}
 .comp-synth-table th{background:var(--bg4);color:var(--text3);font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.35rem .6rem;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;}
-.comp-synth-table th:first-child{text-align:left;}
 .comp-synth-table td{padding:.32rem .6rem;border-bottom:1px solid var(--border);color:var(--text2);text-align:center;white-space:nowrap;}
-.comp-synth-table td:first-child{text-align:left;font-weight:700;color:var(--text);}
 .comp-synth-table tr:last-child td{border-bottom:none;}
 .comp-synth-table td.best{color:var(--green);font-weight:800;}
 .comp-synth-table td.worst{color:var(--red);opacity:.7;}
 .comp-synth-table tr.active-sc td{background:rgba(160,107,255,.07);}
+/* Scroll interne par module — pas de débordement sur la page */
+.comp-table-card .comp-table-scroll{overflow-x:auto;max-width:100%;}
+.comp-bubble-card .comp-bubble-scroll{overflow-x:auto;overflow-y:hidden;}
+.comp-sp-card .sp-matrix-wrap{overflow-x:auto;overflow-y:auto;max-width:100%;}
+.comp-terminus-card .comp-term-scroll{overflow-x:auto;max-width:100%;}
+/* Sticky 1ère colonne : tableau synthèse */
+.comp-synth-table th:first-child{text-align:left;position:sticky;left:0;z-index:3;background:var(--bg4);}
+.comp-synth-table td:first-child{text-align:left;font-weight:700;color:var(--text);position:sticky;left:0;z-index:1;background:var(--bg2);}
+.comp-synth-table tr.active-sc td:first-child{background:rgba(30,28,60,.97);}
+/* Boutons tuile carte */
+.map-tile-btn{font-size:.58rem;}
+.map-tile-btn.active{background:var(--purple);color:#fff;border-color:var(--purple);}
+/* SP matrix scroll */
+.sp-matrix-wrap{overflow-x:auto;overflow-y:auto;}
 /* Sélecteur colonnes tableau synthèse */
 .comp-synth-table th:first-child,.comp-synth-table td:first-child{position:sticky;left:0;z-index:1;background:var(--bg2);}
 .comp-synth-table thead th:first-child{z-index:3;}

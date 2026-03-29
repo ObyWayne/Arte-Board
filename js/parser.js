@@ -516,6 +516,21 @@ function setMapTile(type){
   _mapTileLayerObj = L.tileLayer(t.url, {maxZoom:19, attribution:t.attr});
   _mapTileLayerObj.addTo(_map);
 }
+let _mapTileType   = 'standard';
+let _mapTileObj    = null;
+const _MAP_TILES = {
+  standard:  { url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                                                 attr:'© OpenStreetMap' },
+  satellite: { url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',       attr:'© Esri' },
+  transport: { url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',                            attr:'© CartoDB' },
+};
+function setMapTile(type){
+  _mapTileType = type;
+  document.querySelectorAll('.map-tile-btn').forEach(b=>b.classList.toggle('active',b.dataset.tile===type));
+  if(!_map) return;
+  if(_mapTileObj){ _map.removeLayer(_mapTileObj); }
+  const t = _MAP_TILES[type]||_MAP_TILES.standard;
+  _mapTileObj = L.tileLayer(t.url,{maxZoom:19,attribution:t.attr}).addTo(_map);
+}
 let _mapLayers = {route: null, markers: null, geojson: null};
 let _mapGeoJSON = null; // stocke le GeoJSON chargé depuis le ZIP
 
@@ -526,7 +541,9 @@ function initMap(){
   el.innerHTML = '';
   _map = L.map('osmMap', {zoomControl:true, attributionControl:true});
   const _t0 = _MAP_TILES[_mapTileLayer] || _MAP_TILES.standard;
-  _mapTileLayerObj = L.tileLayer(_t0.url, {maxZoom:19, attribution:_t0.attr}).addTo(_map);
+  const _t = _MAP_TILES[_mapTileType]||_MAP_TILES.standard;
+  _mapTileObj = L.tileLayer(_t.url,{maxZoom:19,attribution:_t.attr}).addTo(_map);
+
   _map.setView([46.5, 2.3], 6); // France par défaut
 }
 
@@ -613,7 +630,7 @@ function fsOpenSP(){
     Object.assign(body.style, {alignItems:'flex-start', padding:'1.5rem', overflow:'auto'});
     const container = document.getElementById('spMatrixContainer') || card;
     const clone = container.cloneNode(true);
-    clone.style.cssText = 'width:min(98vw,1400px);overflow:visible;';
+    clone.style.cssText = 'width:auto;overflow:visible;';
     // Remove any max-height restrictions
     clone.querySelectorAll('*').forEach(el=>{
       if(el.style.maxHeight) el.style.maxHeight='none';

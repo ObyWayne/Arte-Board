@@ -394,19 +394,37 @@ function renderChargeChartOnCanvas(canvas, forcedW, forcedH, all, filtered){
   const bH=v=>(v/yMax)*PH;
 
   // Grille Y
-  // Grille Y
   const _hasAxisCvs = !!document.getElementById('chargeAxisCanvas');
+  // Grille Y (labels sur chargeAxisCanvas séparé si présent)
+  const _axisEl = document.getElementById('chargeAxisCanvas');
   ctx.lineWidth=.7;
   for(let t=0;t<=5;t++){
     const v=yMax/5*t, y=py(v);
     ctx.strokeStyle='rgba(160,160,200,.12)';
     ctx.beginPath(); ctx.moveTo(PAD.l,y); ctx.lineTo(W-PAD.r,y); ctx.stroke();
-    // Labels Y : dessinés sur le canvas principal seulement s'il n'y a pas de canvas axe séparé
-    if(!_hasAxisCvs){
+    if(!_axisEl){  // labels intégrés seulement si pas de canvas axe séparé
       ctx.fillStyle='rgba(180,190,220,.55)';
       ctx.font='600 11px "Barlow Condensed",sans-serif'; ctx.textAlign='right';
       ctx.fillText(Math.round(v),PAD.l-4,y+3);
     }
+  }
+  // Rendu de l'axe Y sur canvas fixe séparé
+  if(_axisEl){
+    const AW=PAD.l+2, dpr2=window.devicePixelRatio||1;
+    _axisEl.width=Math.round(AW*dpr2); _axisEl.height=Math.round(H*dpr2);
+    _axisEl.style.width=AW+'px'; _axisEl.style.height=H+'px';
+    const ax=_axisEl.getContext('2d'); ax.scale(dpr2,dpr2);
+    const bg=getComputedStyle(document.body).getPropertyValue('--bg2').trim()||'#1f2435';
+    ax.fillStyle=bg; ax.fillRect(0,0,AW,H);
+    ax.fillStyle='rgba(180,190,220,.55)';
+    ax.font='600 11px "Barlow Condensed",sans-serif'; ax.textAlign='right';
+    for(let t=0;t<=5;t++){
+      const v=yMax/5*t;
+      ax.fillText(Math.round(v),PAD.l-4,py(v)+3);
+    }
+    ax.strokeStyle='rgba(160,160,200,.2)'; ax.lineWidth=1;
+    ax.beginPath(); ax.moveTo(AW-1,PAD.t); ax.lineTo(AW-1,PAD.t+PH); ax.stroke();
+  }
   }
 
   stationOrder.forEach((nom,si)=>{
@@ -793,13 +811,13 @@ function renderCompTerminus(all){
 
   // Table
   const thead=`<tr>
-    <th class="row-hdr" style="min-width:110px;">${isEN?'Terminus':'Terminus'}</th>
+    <th class="row-hdr" style="min-width:110px;position:sticky;left:0;z-index:3;background:var(--bg4);">${isEN?'Terminus':'Terminus'}</th>
     ${scData.map((d,i)=>`<th style="color:${SC_COLORS[all.indexOf(d)%SC_COLORS.length]};min-width:195px;padding:.4rem;">${d.sc.label}</th>`).join('')}
   </tr>`;
 
   const tbody=termNames.map(tNom=>
     `<tr>
-      <td style="font-size:.6rem;font-weight:800;font-family:var(--fontb);color:var(--text);white-space:nowrap;padding:.4rem .5rem;">${tNom}</td>
+      <td style="font-size:.6rem;font-weight:800;font-family:var(--fontb);color:var(--text);white-space:nowrap;padding:.4rem .5rem;position:sticky;left:0;z-index:1;background:var(--bg2);">${tNom}</td>
       ${scData.map(d=>{
         const ret=(d.termA===tNom)?d.retA:(d.termR===tNom)?d.retR:null;
         return `<td style="padding:.4rem .5rem;">
@@ -813,7 +831,7 @@ function renderCompTerminus(all){
   ).join('');
 
   el.innerHTML=`${filters}
-    <div style="overflow-x:auto;">
+    <div class="comp-term-scroll">
       <table class="term-cmp-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.6rem;padding-top:.4rem;border-top:1px solid var(--border);">${legend}</div>`;
@@ -884,7 +902,9 @@ function renderCompTable(all){
     return c.higher ? Math.min(...vs) : Math.max(...vs);
   });
   const STK = 'position:sticky;left:0;z-index:2;background:var(--bg2)';
-  let html = `<thead><tr><th style="${STK};z-index:3;">${isEN?'Scenario':'Scénario'}</th>${COLS.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead><tbody>`;
+  const STK_TH = 'position:sticky;left:0;z-index:3;background:var(--bg4);';
+  const STK_TD = 'position:sticky;left:0;z-index:1;background:var(--bg2);font-weight:700;color:var(--text);';
+  let html = `<thead><tr><th style="${STK_TH}">${isEN?'Scenario':'Scénario'}</th>${COLS.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead><tbody>`;
   all.forEach((k,si)=>{
     const isActive = si===currentSc;
     html += `<tr class="${isActive?'active-sc':''}">`;
