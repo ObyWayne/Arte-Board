@@ -286,6 +286,7 @@
 <script src="js/render.comparatif.js"></script>
 <script src="js/render.js"></script>
 <script src="js/render.marche.js"></script>
+<script src="js/render.synthese.js"></script>
 <script src="js/settings.js"></script>
 
 <!-- Fragment loader -->
@@ -354,8 +355,7 @@ function switchTab(name) {
       setTimeout(()=>{ if(typeof renderMap === 'function') renderMap(); }, 100);
     }
     if(name === 'synthese'){
-      if(typeof renderScorecard  === 'function') renderScorecard();
-      if(typeof carouselRender   === 'function') carouselRender();
+      if(typeof renderSynthese === 'function') renderSynthese();
     }
   });
 }

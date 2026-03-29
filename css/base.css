@@ -441,3 +441,108 @@ tr.tr-retournement td.td-station{color:var(--purple);background:rgba(var(--purpl
 /* SP styles */
 .terminus-partiel{color:var(--green);font-weight:700;}
 .sp-flag{color:var(--orange);font-size:.6rem;opacity:.9;}
+
+/* ════════════════════════════════════════════
+   SYNTHÈSE — Carousel fiches opérationnelles
+════════════════════════════════════════════ */
+#view-synthese { overflow: auto; }
+
+.synth-carousel-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 10px 10px;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.synth-card-area {
+  width: 100%;
+  max-width: 1100px;
+}
+
+.synth-fiche-wrap {
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.75);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.synth-svg { display: block; width: 100%; }
+
+/* ── Barre de navigation ── */
+.synth-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.synth-btn {
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.65);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 7px;
+  padding: 7px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font);
+  transition: background .14s, color .14s;
+  line-height: 1;
+}
+.synth-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+.synth-btn:disabled { opacity: .3; cursor: default; }
+
+.synth-arrow { font-size: 15px; padding: 7px 13px; }
+
+.synth-pdf {
+  background: rgba(53,184,125,.13);
+  border-color: rgba(53,184,125,.35);
+  color: #35B87D;
+  margin-left: 14px;
+  font-size: 11px;
+}
+.synth-pdf:hover { background: rgba(53,184,125,.25); color: #fff; }
+
+/* ── Dots ── */
+.synth-dots { display: flex; gap: 6px; align-items: center; }
+.synth-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  cursor: pointer;
+  transition: background .14s;
+}
+.synth-dot.active { background: rgba(255,255,255,.8); }
+
+/* ── État vide ── */
+.synth-empty {
+  color: var(--text3);
+  text-align: center;
+  padding: 40px;
+  font-family: var(--font);
+  font-size: 13px;
+}
+
+/* ════════════════════════════════════════════
+   IMPRESSION  @media print
+   Cible uniquement la fiche courante
+════════════════════════════════════════════ */
+@media print {
+  /* Masque tout sauf la fiche */
+  body > *                { display: none !important; }
+  #app                    { display: block !important; }
+  .topbar, .page-tabs,
+  .settings-panel,
+  .sidebar, #scBar,
+  #pageSub                { display: none !important; }
+  .main                   { display: block !important; margin: 0 !important; padding: 0 !important; }
+  .page-view              { display: none !important; }
+  #view-synthese          { display: block !important; }
+  .synth-nav-bar          { display: none !important; }
+  .synth-carousel-wrap    { padding: 0 !important; gap: 0 !important; }
+  .synth-fiche-wrap       { max-width: 100% !important; box-shadow: none !important; border-radius: 0 !important; }
+  .synth-svg              { width: 100% !important; height: auto !important; }
+
+  @page { size: A4 landscape; margin: 0; }
+}

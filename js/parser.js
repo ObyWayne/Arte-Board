@@ -1128,6 +1128,12 @@ function parseMeta(wb){
     if(r[0]==='SERVICE_H')   meta.serviceHeures=parseFloat(r[1]);
     if(r[0]==='MT_ALLER')    meta.mtAller=String(r[1]||'').trim();
     if(r[0]==='MT_RETOUR')   meta.mtRetour=String(r[1]||'').trim();
+    // Synthèse — matériel roulant
+    if(r[0]==='MR_TYPE')              meta.mrType=String(r[1]||'').trim().toLowerCase();
+    // Synthèse — scorecard fiche opérationnelle
+    if(r[0]==='SCORECARD_GLOBAL')     meta.scorecardGlobal=parseFloat(r[1])||null;
+    if(r[0]==='SCORECARD_FREQUENCE')  meta.scorecardFrequence=parseFloat(r[1])||null;
+    if(r[0]==='SCORECARD_REGULARITE') meta.scorecardRegularite=parseFloat(r[1])||null;
   });
   return meta;
 }
