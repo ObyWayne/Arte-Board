@@ -425,7 +425,6 @@ function renderChargeChartOnCanvas(canvas, forcedW, forcedH, all, filtered){
     ax.strokeStyle='rgba(160,160,200,.2)'; ax.lineWidth=1;
     ax.beginPath(); ax.moveTo(AW-1,PAD.t); ax.lineTo(AW-1,PAD.t+PH); ax.stroke();
   }
-  }
 
   stationOrder.forEach((nom,si)=>{
     const xBase=PAD.l+si*stW;
@@ -491,7 +490,7 @@ function renderChargeChartOnCanvas(canvas, forcedW, forcedH, all, filtered){
   });
    // ── Axe Y sur canvas séparé (sticky) ──
   _renderChargeYAxis(PAD, H, PH, yMax, py, dpr);
-
+}
 function _renderChargeYAxis(PAD, H, PH, yMax, py, dpr){
   const axisCanvas = document.getElementById('chargeAxisCanvas');
   if(!axisCanvas) return;
@@ -926,7 +925,7 @@ function renderCompTable(all){
 /* ═══════════════════════════════════════════════
    PAGE SYNTHESE — SCORECARD
 ═══════════════════════════════════════════════ */
-const SCORECARD_CRITERIA = [
+let SCORECARD_CRITERIA = [
   {key:'capacite',    fr:'Capacité',    en:'Capacity',    score:5},
   {key:'regularite',  fr:'Régularité',  en:'Regularity',  score:4},
   {key:'faisabilite', fr:'Faisabilité', en:'Feasibility', score:5},
