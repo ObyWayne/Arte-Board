@@ -499,12 +499,6 @@ let _lastRadarAll = [], _lastRadarFiltered = [];
 let _mapTileLayer    = 'standard';  // tuile active
 let _mapTileLayerObj = null;         // référence Leaflet
 
-const _MAP_TILES = {
-  standard:  { url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                                                   attr:'© OpenStreetMap' },
-  satellite: { url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',         attr:'© Esri World Imagery' },
-  transport: { url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',                              attr:'© CartoDB' },
-};
-
 function setMapTile(type){
   _mapTileLayer = type;
   document.querySelectorAll('.map-tile-btn').forEach(b=>{
@@ -540,7 +534,7 @@ function initMap(){
   if(!el) return;
   el.innerHTML = '';
   _map = L.map('osmMap', {zoomControl:true, attributionControl:true});
-  const _t0 = _MAP_TILES[_mapTileLayer] || _MAP_TILES.standard;
+  const _t0 = _MAP_TILES[_mapTileType] || _MAP_TILES.standard;
   const _t = _MAP_TILES[_mapTileType]||_MAP_TILES.standard;
   _mapTileObj = L.tileLayer(_t.url,{maxZoom:19,attribution:_t.attr}).addTo(_map);
 
@@ -677,7 +671,7 @@ function fsOpenMap(){
     // Attend que le DOM soit rendu avant d'init Leaflet
     setTimeout(()=>{
       const fsMap = L.map('osmMapFs', {zoomControl:true, attributionControl:true});
-     const _ft = _MAP_TILES[_mapTileLayer] || _MAP_TILES.standard;
+      const _ft = _MAP_TILES[_mapTileType] || _MAP_TILES.standard;
       L.tileLayer(_ft.url, {maxZoom:19, attribution:_ft.attr}).addTo(fsMap);
       const col = BRAND.primaire1 || '#a06bff';
       if(LINE && LINE.stations){
