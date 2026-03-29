@@ -764,10 +764,8 @@ function renderCompTerminus(all){
       <div style="display:flex;align-items:center;gap:.3rem;font-size:.55rem;font-weight:800;color:var(--text);font-family:var(--fontb);">
         <div style="width:12px;height:12px;border-radius:2px;background:${catData.col};flex-shrink:0;"></div>${catData.emoji} ${catName}
       </div>
-      ${[...catData.subs.entries()].map(([subLbl,subData])=>
-        `<div style="display:flex;align-items:center;gap:.3rem;font-size:.5rem;color:var(--text2);font-family:var(--fontb);padding-left:.8rem;">
-          <div style="width:8px;height:8px;border-radius:1px;background:${subData.col};flex-shrink:0;"></div>${subLbl}
-        </div>`
+      ${[...catData.subs.keys()].map(subLbl=>
+        `<div style="font-size:.48rem;color:var(--text3);font-family:var(--fontb);padding-left:.9rem;line-height:1.5;">• ${subLbl}</div>`
       ).join('')}
     </div>`
   ).join('');
