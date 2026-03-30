@@ -226,8 +226,8 @@ function applyLang(){
   setTxt('scBarLabel',   T('scenarioBar'));
   // pageSub — ne re-render que si LINE chargée, sinon juste le label statique
   if(!LINE){
-    document.getElementById('pageSub').innerHTML =
-      `${T('scenarioBar')} <span id="scLabel">—</span> — ${T('dirOutbound')}`;
+    // document.getElementById('pageSub').innerHTML =
+      //`${T('scenarioBar')} <span id="scLabel">—</span> — ${T('dirOutbound')}`;
   }
   // KPI labels (via ids directs)
   set('kpiLabelFlotte',   T('kpiLabelFlotte'));
