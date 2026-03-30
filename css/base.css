@@ -17,13 +17,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .app-shell{display:flex;flex:1;min-height:0;}
 
 /* ── Sidebar ── */
-.sidebar{width:52px;background:#0c0e1a;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:10px 0;flex-shrink:0;z-index:100;gap:2px;}
+.sidebar{width:52px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:10px 0;flex-shrink:0;z-index:100;gap:2px;}
 .sidebar-logo{width:42px;height:30px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;}
 .logo-svg .arc-main{fill:var(--purple);}
 .logo-svg .arc-secondary{fill:var(--purple3);}
 .nav-btn{width:36px;height:36px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;background:none;color:var(--text3);transition:color .15s,background .15s;position:relative;}
 .nav-btn:hover{background:var(--bg3);color:var(--text2);}
-.nav-btn.on{background:#1e1a3a;color:var(--purple);}
+.nav-btn.on{background:var(--bg3);color:var(--purple);}
 .nav-btn .nav-tip{position:absolute;left:44px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:.6rem;font-weight:700;color:var(--text);white-space:nowrap;letter-spacing:.04em;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;}
 .nav-btn:hover .nav-tip{opacity:1;}
 .nav-sep{width:28px;height:1px;background:var(--border);margin:3px 0;flex-shrink:0;}
