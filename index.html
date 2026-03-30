@@ -217,10 +217,7 @@
   <!-- ── SIDEBAR ── -->
   <div class="sidebar">
     <div class="sidebar-logo">
-      <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="370 0 1490 377" style="height:26px;width:auto;display:block;">
-        <path class="arc-main" d="M0 0 C1.0103833 0.27328125 2.0207666 0.5465625 3.06176758 0.828125 C11.74630163 ..." transform="translate(1357,2.6875)"/>
-        <path class="arc-secondary" d="M0 0 C25.84910567 -0.3264093 51.66300771 0.21470101 77.5 0.9375 C79.08853148 0.9..." transform="translate(1132,133)"/>
-      </svg>
+      <img src="img/logo_inline.svg" style="height:26px;width:auto;display:block;">
     </div>
 
     <button class="nav-btn on" id="nav-btn-parcours" onclick="switchTab('parcours')">
@@ -373,6 +370,11 @@ function switchTab(name) {
   if(target) target.classList.add('active');
 
   // pageSub visible seulement sur parcours
+  // Show/hide sc-block
+  const scBlock = document.getElementById('scBlock');
+  if(scBlock) scBlock.style.display = 
+  (name === 'parcours' || name === 'terminus') ? '' : 'none';
+
   const pageSub = document.getElementById('pageSub');
   currentTab = name;
 

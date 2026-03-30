@@ -808,7 +808,8 @@ function render(){
       spBadgeEl = document.createElement('span');
       spBadgeEl.id = 'spBadge';
       spBadgeEl.style.cssText='background:var(--red);color:#fff;font-size:.6rem;font-weight:800;letter-spacing:.08em;padding:.2rem .5rem;border-radius:3px;text-transform:uppercase;margin-left:.4rem';
-      document.getElementById('scLabel').after(spBadgeEl);
+      const scLbl = document.getElementById('scLabel');
+      if(scLbl) scLbl.after(spBadgeEl);
     }
     spBadgeEl.textContent = 'SP';
     spBadgeEl.style.display='inline-block';
@@ -816,7 +817,8 @@ function render(){
     if(spBadgeEl) spBadgeEl.style.display='none';
   }
 
-  document.getElementById('scLabel').textContent = sc.label;
+  const scLbl = document.getElementById('scLabel');
+  if(scLbl) scLbl.textContent = sc.label;
   renderKPIs(currentSc);
   renderCharts(currentSc);
   updateMTImage();
