@@ -70,8 +70,8 @@ function computeKPIsAll(){
       const tPrioA = LINE.inter.reduce((a,seg)=>a+(seg.tpsA||0),0)/60;
       const tPrioR = LINE.inter.reduce((a,seg)=>a+(seg.tpsR||0),0)/60;
       const nSt = LINE.stations.length || 1;
-      const moyMontees   = LINE.stations.reduce((a,s)=>a+(s.chargeA||0),0) / nSt;
-      const moyDescentes = LINE.stations.reduce((a,s)=>a+(s.chargeR||0),0) / nSt;
+      const moyMontees   = LINE.stations.reduce((a,s)=>a+(s.monteesA||0),0) / nSt;
+      const moyDescentes = LINE.stations.reduce((a,s)=>a+(s.descentesA||0),0) / nSt;
       const nStations    = nSt;
       const distInterMoy = LINE.inter.length > 0
         ? +(LINE.inter.reduce((a,b)=>a+b.dist,0) / LINE.inter.length).toFixed(0)
@@ -130,23 +130,16 @@ function renderComparatif(){
     return `<button class="radar-sc-btn${on?' on':''}" style="border-color:${col};color:${col};${on?`background:${col}22`:''}" onclick="toggleRadarSc(${i})">${k.sc.label}</button>`;
   }).join('');
 
-  // ── Charge : tous scénarios ──
-  if(!chargeActiveScenarios || chargeActiveScenarios.size === 0)
-    chargeActiveScenarios = new Set(all.map((_,i)=>i));
-  for(const idx of chargeActiveScenarios)
-    if(idx>=all.length) chargeActiveScenarios.delete(idx);
+  // ── Montées/Descentes : sélection unique ──
+  if(bubbleActiveSc === null || bubbleActiveSc >= all.length)
+  bubbleActiveSc = 0;
 
-  const chargeSel = document.getElementById('chargeScSelector');
-  chargeSel.innerHTML = all.map((k,i)=>{
-    const col=SC_COLORS[i%SC_COLORS.length], on=chargeActiveScenarios.has(i);
-    return `<button class="radar-sc-btn${on?' on':''}" style="border-color:${col};color:${col};${on?`background:${col}22`:''}" onclick="toggleChargeSc(${i})">${k.sc.label}</button>`;
-  }).join('');
+  _buildBubbleScPills(all);
 
   const radarFiltered  = all.filter((_,i)=>radarActiveScenarios.has(i));
-  const chargeFiltered = all.filter((_,i)=>chargeActiveScenarios.has(i));
 
   try { renderRadar(all, radarFiltered); } catch(e){ console.error('[renderComparatif] renderRadar:', e); }
-  try { renderChargeChart(all, chargeFiltered); } catch(e){ console.error('[renderComparatif] renderChargeChart:', e); }
+  try { renderBubbleChart(all, bubbleActiveSc); } catch(e){ console.error('[renderComparatif] renderBubbleChart:', e); }
   try { renderCompTable(all); } catch(e){ console.error('[renderComparatif] renderCompTable:', e); }
   try { renderSPMatrix(); } catch(e){ console.error('[renderComparatif] renderSPMatrix:', e); }
   try { renderCompTerminus(all); } catch(e){ console.error('[renderComparatif] renderCompTerminus:', e); }
@@ -159,11 +152,19 @@ function toggleRadarSc(idx){
   if(LINE) renderComparatif();
 }
 
-function toggleChargeSc(idx){
-  if(!chargeActiveScenarios) chargeActiveScenarios = new Set();
-  if(chargeActiveScenarios.has(idx)){ if(chargeActiveScenarios.size>1) chargeActiveScenarios.delete(idx); }
-  else chargeActiveScenarios.add(idx);
-  if(LINE) renderComparatif();
+function selectBubbleSc(idx){
+  bubbleActiveSc = idx;
+  _buildBubbleScPills(window._lastBubbleAll || []);
+  if(LINE) renderBubbleChart(window._lastBubbleAll || [], bubbleActiveSc);
+}
+
+function _buildBubbleScPills(all){
+  const sel = document.getElementById('chargeScSelector');
+  if(!sel) return;
+  sel.innerHTML = all.map((k,i)=>`
+    <div class="sc-pill${i===bubbleActiveSc?' on':''}"
+         onclick="selectBubbleSc(${i})">${k.sc.label}</div>
+  `).join('');
 }
 
 /* ── MATRICE SP ── */
@@ -383,161 +384,284 @@ function renderRadar(all, filtered){
 }
 
 /* ── HISTOGRAMME CHARGES (barres superposées) ── */
-function renderChargeChart(all, filtered){
-  const canvas = document.getElementById('chargeCanvas');
-  if(!canvas) return;
-  window._lastChargeAll      = all;
-  window._lastChargeFiltered = filtered;
-  renderChargeChartOnCanvas(canvas, null, null, all, filtered);
+// Constantes formule de charge
+const NB_PORTE    = 16;
+const TECH_TIME   = 10; // secondes
+
+function calcDwCharge(dw, freqMin){
+  // Charge = (2400 × nb_porte × (dw - technical_time)) / freq_s
+  return (2400 * NB_PORTE * (dw - TECH_TIME)) / (freqMin * 60);
 }
 
-function renderChargeChartOnCanvas(canvas, forcedW, forcedH, all, filtered){
+function renderBubbleChart(all, scIdx){
+  const canvas = document.getElementById('chargeCanvas');
   if(!canvas) return;
-  if(!all) all = _lastChargeAll || [];
-  if(!filtered||filtered.length===0) filtered=all;
+  window._lastBubbleAll = all;
+  window._lastBubbleSc  = scIdx;
+  renderBubbleChartOnCanvas(canvas, null, null, all, scIdx);
+}
 
-  const SC_COLORS=[BRAND.aller, BRAND.retour, BRAND.primaire2, BRAND.cycle, BRAND.primaire1,'#e8453c'];
+function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx){
+  if(!canvas || !all || all.length === 0) return;
+  if(scIdx == null || scIdx >= all.length) scIdx = 0;
 
-  // Union ordonnée des stations
-  const stationOrder=[], stationSet=new Set();
-  filtered.forEach(k=>{
-    const sts=LINE.scenariosData?LINE.scenariosData[k.scIdx].stations:LINE.stations;
-    sts.forEach(s=>{ if(!stationSet.has(s.nom)){stationSet.add(s.nom);stationOrder.push(s.nom);} });
-  });
+  const k   = all[scIdx];
+  const sc  = k.sc;
+  const sts = LINE.scenariosData ? LINE.scenariosData[k.scIdx].stations : LINE.stations;
 
-  const scData=filtered.map(k=>{
-    const sts=LINE.scenariosData?LINE.scenariosData[k.scIdx].stations:LINE.stations;
-    const map={};
-    sts.forEach(s=>{ map[s.nom]={a:s.chargeA||0,r:s.chargeR||0}; });
-    return map;
-  });
+  // ── Données par station ──
+  const stationNames = sts.map(s => s.nom);
+  const monteesA   = sts.map(s => s.monteesA   || 0);
+  const descentesA = sts.map(s => s.descentesA || 0);
 
-  const nSc=filtered.length, nSt=stationOrder.length;
-  const PAD={l:54,r:20,t:24,b:80};
-  // En fullscreen on agrandit les barres proportionnellement
-  const scaleFactor = forcedW ? Math.max(1, forcedW / (PAD.l + nSt*52 + PAD.r)) : 1;
-  const BAR_W = Math.round(20 * Math.min(scaleFactor, 2.5));
-  const GRP_GAP = Math.round(10 * Math.min(scaleFactor, 2));
-  const ST_GAP  = Math.round(22 * Math.min(scaleFactor, 2));
-  const stW = BAR_W*2 + GRP_GAP + ST_GAP;
-  const H = forcedH || 228;
+  // Courbe charge cumulée : part de 0, +montées -descentes
+  const chargeCum = [];
+  let cur = 0;
+  for(let i = 0; i < sts.length; i++){
+    cur += monteesA[i] - descentesA[i];
+    chargeCum.push(cur);
+  }
+
+  // ── Lignes dw (formule charge) ──
+  const freqMin = sc.freqHP || sc.freqMin || 6;
+  const dwVals  = [20, 30, 40];
+  const dwLines = dwVals.map(dw => calcDwCharge(dw, freqMin));
+
+  // ── Dimensions canvas ──
+  const nSt   = stationNames.length;
+  const PAD   = {l:54, r:60, t:24, b:80};
+  const scaleFactor = forcedW ? Math.max(1, forcedW / (PAD.l + nSt * 52 + PAD.r)) : 1;
+  const BAR_W  = Math.round(20 * Math.min(scaleFactor, 2.5));
+  const GRP_GAP= Math.round(10 * Math.min(scaleFactor, 2));
+  const ST_GAP = Math.round(22 * Math.min(scaleFactor, 2));
+  const stW    = BAR_W * 2 + GRP_GAP + ST_GAP;
+
+  // Hauteur : utilise TOUT l'espace disponible du bloc
+  const H  = forcedH || (canvas.parentElement ? canvas.parentElement.clientHeight || 260 : 260);
   const PH = H - PAD.t - PAD.b;
-  const W = forcedW || (PAD.l + nSt*stW + PAD.r);
+  const W  = forcedW || (PAD.l + nSt * stW + PAD.r);
 
-  const dpr = window.devicePixelRatio||1;
-  canvas.width=W*dpr; canvas.height=H*dpr;
-  canvas.style.width=W+'px'; canvas.style.height=H+'px';
-  const ctx=canvas.getContext('2d');
-  ctx.scale(dpr,dpr);
-  ctx.clearRect(0,0,W,H);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = W  * dpr;
+  canvas.height = H  * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
 
-  let yMax=0;
-  scData.forEach(map=>stationOrder.forEach(nom=>{ const d=map[nom]||{a:0,r:0}; yMax=Math.max(yMax,d.a,d.r); }));
-  if(yMax===0) yMax=1;
-  yMax=Math.ceil(yMax*1.15/10)*10;
+  // ── Échelle Y1 (barres montées/descentes) ──
+  let yMax1 = Math.max(...monteesA, ...descentesA, 1);
+  yMax1 = Math.ceil(yMax1 * 1.15 / 10) * 10;
+  const py1 = v => PAD.t + PH - (v / yMax1) * PH;
+  const bH1 = v => (v / yMax1) * PH;
 
-  const py=v=>PAD.t+PH-(v/yMax)*PH;
-  const bH=v=>(v/yMax)*PH;
+  // ── Échelle Y2 (charge cumulée + lignes dw) ──
+  const allY2 = [...chargeCum, ...dwLines];
+  let yMax2 = Math.ceil(Math.max(...allY2) * 1.15 / 50) * 50 || 100;
+  let yMin2 = Math.min(0, Math.floor(Math.min(...chargeCum) * 1.1 / 50) * 50);
+  const py2 = v => PAD.t + PH - ((v - yMin2) / (yMax2 - yMin2)) * PH;
 
-  // Grille Y
-  const _hasAxisCvs = !!document.getElementById('chargeAxisCanvas');
-  // Grille Y (labels sur chargeAxisCanvas séparé si présent)
-  const _axisEl = document.getElementById('chargeAxisCanvas');
-  ctx.lineWidth=.7;
-  for(let t=0;t<=5;t++){
-    const v=yMax/5*t, y=py(v);
-    ctx.strokeStyle='rgba(160,160,200,.12)';
-    ctx.beginPath(); ctx.moveTo(PAD.l,y); ctx.lineTo(W-PAD.r,y); ctx.stroke();
-    if(!_axisEl){  // labels intégrés seulement si pas de canvas axe séparé
-      ctx.fillStyle='rgba(180,190,220,.55)';
-      ctx.font='600 11px "Barlow Condensed",sans-serif'; ctx.textAlign='right';
-      ctx.fillText(Math.round(v),PAD.l-4,y+3);
-    }
-  }
-  // Rendu de l'axe Y sur canvas fixe séparé
-  if(_axisEl){
-    const AW=PAD.l+2, dpr2=window.devicePixelRatio||1;
-    _axisEl.width=Math.round(AW*dpr2); _axisEl.height=Math.round(H*dpr2);
-    _axisEl.style.width=AW+'px'; _axisEl.style.height=H+'px';
-    const ax=_axisEl.getContext('2d'); ax.scale(dpr2,dpr2);
-    const bg=getComputedStyle(document.body).getPropertyValue('--bg2').trim()||'#1f2435';
-    ax.fillStyle=bg; ax.fillRect(0,0,AW,H);
-    ax.fillStyle='rgba(180,190,220,.55)';
-    ax.font='600 11px "Barlow Condensed",sans-serif'; ax.textAlign='right';
-    for(let t=0;t<=5;t++){
-      const v=yMax/5*t;
-      ax.fillText(Math.round(v),PAD.l-4,py(v)+3);
-    }
-    ax.strokeStyle='rgba(160,160,200,.2)'; ax.lineWidth=1;
-    ax.beginPath(); ax.moveTo(AW-1,PAD.t); ax.lineTo(AW-1,PAD.t+PH); ax.stroke();
+  // ── Grille Y1 (lignes horizontales) ──
+  ctx.lineWidth = .7;
+  for(let t = 0; t <= 5; t++){
+    const v = yMax1 / 5 * t;
+    const y = py1(v);
+    ctx.strokeStyle = 'rgba(160,160,200,.12)';
+    ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(W - PAD.r, y); ctx.stroke();
   }
 
-  stationOrder.forEach((nom,si)=>{
-    const xBase=PAD.l+si*stW;
+  // ── Axe Y1 (canvas séparé sticky) ──
+  _renderBubbleYAxis(PAD, H, PH, yMax1, py1, dpr);
 
-    ['a','r'].forEach((dir,di)=>{
-      const xBar=xBase+di*(BAR_W+GRP_GAP);
+  // ── Barres : montées (bleu) et descentes (orange) ──
+  const COL_A = BRAND.aller   || '#4a9eff';
+  const COL_R = BRAND.retour  || '#f5a623';
 
-      // Trier : plus grande valeur dessinée en premier (en dessous), plus petite en dernier (devant)
-      const order=[...Array(nSc).keys()].sort((a,b)=>{
-        const va=(scData[a][nom]||{a:0,r:0})[dir];
-        const vb=(scData[b][nom]||{a:0,r:0})[dir];
-        return vb-va;
-      });
+  stationNames.forEach((nom, si) => {
+    const xBase = PAD.l + si * stW;
 
-      order.forEach(sci=>{
-        const val=(scData[sci][nom]||{a:0,r:0})[dir];
-        if(val<=0) return;
-        const globalIdx=all.indexOf(filtered[sci]);
-        const col=SC_COLORS[globalIdx%SC_COLORS.length];
-        const isActive=globalIdx===currentSc;
-        ctx.fillStyle=col+(isActive?'dd':'88');
-        ctx.fillRect(xBar,py(val),BAR_W,bH(val));
-        ctx.strokeStyle=col+(isActive?'ff':'bb');
-        ctx.lineWidth=isActive?1.5:.6;
-        ctx.strokeRect(xBar,py(val),BAR_W,bH(val));
-      });
+    // Montées ↑
+    const vA = monteesA[si];
+    if(vA > 0){
+      ctx.fillStyle = COL_A + '66';
+      ctx.fillRect(xBase, py1(vA), BAR_W, bH1(vA));
+      ctx.strokeStyle = COL_A;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(xBase, py1(vA), BAR_W, bH1(vA));
+      ctx.fillStyle = 'rgba(200,210,230,.8)';
+      ctx.font = 'bold 11px "Barlow Condensed",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('↑', xBase + BAR_W / 2, py1(vA) - 3);
+    }
 
-      // ↑ / ↓ au-dessus de la barre la plus haute
-      const maxVal=Math.max(...Array(nSc).fill(0).map((_,sci)=>(scData[sci][nom]||{a:0,r:0})[dir]));
-      if(maxVal>0){
-        ctx.fillStyle='rgba(200,210,230,.75)';
-        ctx.font='bold 12px "Barlow Condensed",sans-serif';
-        ctx.textAlign='center';
-        ctx.fillText(dir==='a'?'↑':'↓', xBar+BAR_W/2, py(maxVal)-3);
-      }
-    });
+    // Descentes ↓
+    const vR = descentesA[si];
+    const xR = xBase + BAR_W + GRP_GAP;
+    if(vR > 0){
+      ctx.fillStyle = COL_R + '66';
+      ctx.fillRect(xR, py1(vR), BAR_W, bH1(vR));
+      ctx.strokeStyle = COL_R;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(xR, py1(vR), BAR_W, bH1(vR));
+      ctx.fillStyle = 'rgba(200,210,230,.8)';
+      ctx.font = 'bold 11px "Barlow Condensed",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('↓', xR + BAR_W / 2, py1(vR) - 3);
+    }
 
     // Label station incliné
-    const xCenter=xBase+BAR_W+GRP_GAP/2;
+    const xCenter = xBase + BAR_W + GRP_GAP / 2;
     ctx.save();
-    ctx.translate(xCenter,PAD.t+PH+7);
-    ctx.rotate(-Math.PI/3.5);
-    ctx.fillStyle='rgba(180,190,220,.65)';
-    ctx.font='600 10px "Barlow Condensed",sans-serif'; ctx.textAlign='right';
-    ctx.fillText(nom.length>13?nom.slice(0,12)+'…':nom,0,0);
+    ctx.translate(xCenter, PAD.t + PH + 7);
+    ctx.rotate(-Math.PI / 3.5);
+    ctx.fillStyle = 'rgba(180,190,220,.65)';
+    ctx.font = '600 10px "Barlow Condensed",sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(nom.length > 13 ? nom.slice(0,12) + '…' : nom, 0, 0);
     ctx.restore();
   });
 
-  // Légende ↑↓
-  const legY=H-9;
-  ctx.font='700 8.5px "Barlow Condensed",sans-serif'; ctx.textAlign='left';
-  ctx.fillStyle='rgba(200,210,230,.8)';
-  ctx.fillText(T('legendBoardings'),PAD.l,legY);
-  ctx.fillText(T('legendAlightings'),PAD.l+62,legY);
-
-  // Légende scénarios
-  filtered.forEach((k,fi)=>{
-    const globalIdx=all.indexOf(k);
-    const col=SC_COLORS[globalIdx%SC_COLORS.length];
-    const lx=PAD.l+130+fi*70;
-    ctx.fillStyle=col+'dd'; ctx.fillRect(lx,legY-7,10,7);
-    ctx.fillStyle='rgba(180,190,220,.85)'; ctx.fillText(k.sc.label,lx+13,legY);
+  // ── Courbe charge cumulée (Y2, violet) ──
+  const COL_CHARGE = BRAND.primaire1 || '#a06bff';
+  ctx.beginPath();
+  stationNames.forEach((_, si) => {
+    const xCenter = PAD.l + si * stW + BAR_W + GRP_GAP / 2;
+    const y = py2(chargeCum[si]);
+    si === 0 ? ctx.moveTo(xCenter, y) : ctx.lineTo(xCenter, y);
   });
-   // ── Axe Y sur canvas séparé (sticky) ──
-  _renderChargeYAxis(PAD, H, PH, yMax, py, dpr);
+  ctx.strokeStyle = COL_CHARGE;
+  ctx.lineWidth   = 2.5;
+  ctx.lineJoin    = 'round';
+  ctx.stroke();
+
+  // Points sur la courbe
+  stationNames.forEach((_, si) => {
+    const xCenter = PAD.l + si * stW + BAR_W + GRP_GAP / 2;
+    ctx.beginPath();
+    ctx.arc(xCenter, py2(chargeCum[si]), 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = COL_CHARGE;
+    ctx.fill();
+  });
+
+  // ── 3 lignes dw horizontales (Y2, pointillées) ──
+  const DW_COLORS = ['#3ecf6a', '#f5d623', '#e8453c'];
+  dwVals.forEach((dw, di) => {
+    const y = py2(dwLines[di]);
+    ctx.beginPath();
+    ctx.moveTo(PAD.l, y);
+    ctx.lineTo(W - PAD.r, y);
+    ctx.strokeStyle = DW_COLORS[di];
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([6, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Label à droite
+    ctx.fillStyle = DW_COLORS[di];
+    ctx.font = '600 9px "Barlow Condensed",sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`dw=${dw}s`, W - PAD.r + 3, y + 3);
+  });
+
+  // ── Axe Y2 (labels à droite) ──
+  const y2Steps = 5;
+  ctx.fillStyle = 'rgba(180,190,220,.4)';
+  ctx.font = '600 9px "Barlow Condensed",sans-serif';
+  ctx.textAlign = 'right';
+  for(let t = 0; t <= y2Steps; t++){
+    const v = yMin2 + (yMax2 - yMin2) / y2Steps * t;
+    const y = py2(v);
+    ctx.fillText(Math.round(v), W - 2, y + 3);
+  }
+
+  // ── Légende ──
+  const legY = H - 9;
+  ctx.font = '700 8.5px "Barlow Condensed",sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(200,210,230,.8)';
+  ctx.fillText(isEN ? 'Boardings ↑' : 'Montées ↑', PAD.l, legY);
+
+  ctx.fillStyle = COL_R + 'cc';
+  ctx.fillRect(PAD.l + 75, legY - 7, 10, 7);
+  ctx.fillStyle = 'rgba(180,190,220,.85)';
+  ctx.fillText(isEN ? 'Alightings ↓' : 'Descentes ↓', PAD.l + 88, legY);
+
+  ctx.fillStyle = COL_CHARGE + 'cc';
+  ctx.fillRect(PAD.l + 170, legY - 7, 10, 7);
+  ctx.fillStyle = 'rgba(180,190,220,.85)';
+  ctx.fillText('Charge', PAD.l + 183, legY);
+
+  // Légende dw
+  DW_COLORS.forEach((col, di) => {
+    const lx = PAD.l + 235 + di * 62;
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 2]);
+    ctx.beginPath(); ctx.moveTo(lx, legY - 4); ctx.lineTo(lx + 12, legY - 4); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(180,190,220,.85)';
+    ctx.fillText(`dw=${dwVals[di]}s`, lx + 15, legY);
+  });
+
+  // ── Tooltip ──
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx   = (e.clientX - rect.left) * (W / rect.width);
+    let   best = -1, bestDist = Infinity;
+    stationNames.forEach((_, si) => {
+      const xCenter = PAD.l + si * stW + BAR_W + GRP_GAP / 2;
+      const d = Math.abs(mx - xCenter);
+      if(d < bestDist){ bestDist = d; best = si; }
+    });
+    if(best < 0 || bestDist > stW) {
+      _hideBubbleTooltip(); return;
+    }
+    _showBubbleTooltip(e, stationNames[best], monteesA[best], descentesA[best], chargeCum[best]);
+  };
+  canvas.onmouseleave = () => _hideBubbleTooltip();
 }
-function _renderChargeYAxis(PAD, H, PH, yMax, py, dpr){
+
+/* ── Tooltip style projet ── */
+function _getBubbleTooltip(){
+  let t = document.getElementById('_bubbleTooltip');
+  if(!t){
+    t = document.createElement('div');
+    t.id = '_bubbleTooltip';
+    t.style.cssText = [
+      'position:fixed;z-index:9999;pointer-events:none;display:none',
+      'background:var(--bg2);border:1px solid var(--border)',
+      'border-radius:6px;padding:7px 10px',
+      'font-family:"Barlow Condensed",sans-serif;font-size:11px;min-width:130px'
+    ].join(';');
+    document.body.appendChild(t);
+  }
+  return t;
+}
+function _showBubbleTooltip(e, nom, montees, descentes, charge){
+  const t = _getBubbleTooltip();
+  t.innerHTML = `
+    <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:5px;">${nom}</div>
+    <div style="display:flex;justify-content:space-between;gap:12px;margin:2px 0;">
+      <span style="color:var(--text2);">Montées</span>
+      <span style="color:var(--text);font-weight:700;">${montees}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:12px;margin:2px 0;">
+      <span style="color:var(--text2);">Descentes</span>
+      <span style="color:var(--text);font-weight:700;">${descentes}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:12px;margin:2px 0;">
+      <span style="color:var(--purple);">Charge</span>
+      <span style="color:var(--purple);font-weight:700;">${charge} pass.</span>
+    </div>`;
+  t.style.display = 'block';
+  t.style.left = (e.clientX + 12) + 'px';
+  t.style.top  = (e.clientY - 20) + 'px';
+}
+function _hideBubbleTooltip(){
+  const t = document.getElementById('_bubbleTooltip');
+  if(t) t.style.display = 'none';
+}
+
+function _renderBubbleYAxis(PAD, H, PH, yMax, py, dpr){
   const axisCanvas = document.getElementById('chargeAxisCanvas');
   if(!axisCanvas) return;
   const AW = PAD.l + 2;
@@ -550,11 +674,11 @@ function _renderChargeYAxis(PAD, H, PH, yMax, py, dpr){
   axCtx.clearRect(0, 0, AW, H);
   const bgCol = getComputedStyle(document.body).getPropertyValue('--bg2').trim() || '#1f2435';
   axCtx.fillStyle = bgCol; axCtx.fillRect(0, 0, AW, H);
-  for(let t=0; t<=5; t++){
-    const v = yMax/5*t, y = py(v);
+  for(let t = 0; t <= 5; t++){
+    const v = yMax / 5 * t, y = py(v);
     axCtx.fillStyle = 'rgba(180,190,220,.55)';
     axCtx.font = '600 11px "Barlow Condensed",sans-serif'; axCtx.textAlign = 'right';
-    axCtx.fillText(Math.round(v), PAD.l-4, y+3);
+    axCtx.fillText(Math.round(v), PAD.l - 4, y + 3);
   }
   axCtx.strokeStyle = 'rgba(160,160,200,.2)'; axCtx.lineWidth = 1;
   axCtx.beginPath(); axCtx.moveTo(AW-1, PAD.t); axCtx.lineTo(AW-1, PAD.t+PH); axCtx.stroke();

@@ -214,7 +214,7 @@ function fsOpenRadar(){
   });
 }
 
-function fsOpenCharge(){
+function fsOpenBubble(){
   if(!LINE) return;
   openFullscreen(document.getElementById('compBubbleTitle').textContent, body => {
     Object.assign(body.style, {overflow:'auto', alignItems:'flex-start', padding:'0'});
@@ -223,17 +223,15 @@ function fsOpenCharge(){
     const wrap = document.createElement('div');
     wrap.style.cssText = `width:${availW}px;height:${availH}px;flex-shrink:0;`;
     const c2 = document.createElement('canvas');
-    c2.id = 'chargeCanvasFs';
-    // Taille physique explicite pour éviter canvas de 0×0
+    c2.id = 'bubbleCanvasFs';
     c2.width  = availW;
     c2.height = availH;
     c2.style.cssText = 'display:block;width:100%;height:100%;';
     wrap.appendChild(c2);
     body.appendChild(wrap);
-    // Double RAF pour s'assurer que le canvas est dans le DOM et dimensionné
     requestAnimationFrame(()=>requestAnimationFrame(()=>
-      renderChargeChartOnCanvas(c2, availW, availH,
-        window._lastChargeAll||[], window._lastChargeFiltered||[])
+      renderBubbleChartOnCanvas(c2, availW, availH,
+        window._lastBubbleAll||[], window._lastBubbleSc)
     ));
   });
 }
@@ -1146,9 +1144,17 @@ function parseStations(wb){
   for(let i=2;i<rows.length;i++){
     const r=rows[i];
     if(!r[0]||typeof r[0]!=='string') continue;
-    stations.push({nom:r[0].trim(),arretA:parseInt(r[1])||0,arretR:parseInt(r[2])||0,
-                   type:String(r[3]||'normal').trim().toLowerCase(),occup:parseFloat(r[4])||null,
-                   chargeA:parseFloat(r[5])||null, chargeR:parseFloat(r[6])||null});
+    stations.push({
+  nom:    r[0].trim(),
+  arretA: parseInt(r[1])||0,
+  arretR: parseInt(r[2])||0,
+  type:   String(r[3]||'normal').trim().toLowerCase(),
+  occup:  parseFloat(r[4])||null,
+  monteesA:   parseFloat(r[5])||null,
+  descentesA: parseFloat(r[6])||null,
+  monteesR:   parseFloat(r[7])||null,
+  descentesR: parseFloat(r[8])||null,
+});
   }
   return stations;
 }
