@@ -55,6 +55,9 @@ function computeKPIsAll(){
   const results = [];
   LINE.scenarios.forEach((sc, i) => {
     try {
+      // Ignorer les scénarios non nominaux (SP) — ils n'ont pas forcément de stations complètes
+      if((sc.type||'NOMINAL').toUpperCase() !== 'NOMINAL') return;
+
       // Injecter les données du scénario i
       if(LINE.scenariosData && LINE.scenariosData[i]){
         const d = LINE.scenariosData[i];
@@ -418,6 +421,8 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx){
   const k   = all[scIdx];
   const sc  = k.sc;
   const sts = LINE.scenariosData ? LINE.scenariosData[k.scIdx].stations : LINE.stations;
+  if (!sts || sts.length === 0) return;
+  const stationNames = sts.map(s => s.nom);
 
   // ── Données par station ──
   // Données selon direction sélectionnée
