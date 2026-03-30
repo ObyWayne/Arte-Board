@@ -374,8 +374,6 @@ function switchTab(name) {
 
   // pageSub visible seulement sur parcours
   const pageSub = document.getElementById('pageSub');
-  if(pageSub) pageSub.style.display = (name === 'parcours') ? '' : 'none';
-
   currentTab = name;
 
   // Trigger re-render only if fragments loaded and data present
