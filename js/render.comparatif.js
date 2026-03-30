@@ -426,8 +426,8 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx){
   // ── Données par station ──
   // Données selon direction sélectionnée
 const isAller  = (bubbleDir === 'aller');
-const montees   = sts.map(s => isAller ? (s.montees   || 0) : (s.monteesR   || 0));
-const descentes = sts.map(s => isAller ? (s.descentes || 0) : (s.descentesR || 0));
+const montees   = sts.map(s => isAller ? (s.monteesA   || 0) : (s.monteesR   || 0));
+const descentes = sts.map(s => isAller ? (s.descentesA || 0) : (s.descentesR || 0));
 
 // Courbe charge cumulée : part de 0, +montées -descentes
 const chargeCum = [];
