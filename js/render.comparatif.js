@@ -54,10 +54,9 @@ function computeKPIsAll(){
 
   const results = [];
   LINE.scenarios.forEach((sc, i) => {
-    try {
-      // Ignorer les scénarios non nominaux (SP) — ils n'ont pas forcément de stations complètes
+    // Ignorer les scénarios non nominaux (SP) — ils n'ont pas forcément de stations complètes
       if((sc.type||'NOMINAL').toUpperCase() !== 'NOMINAL') return;
-
+    try {
       // Injecter les données du scénario i
       if(LINE.scenariosData && LINE.scenariosData[i]){
         const d = LINE.scenariosData[i];
