@@ -2,6 +2,45 @@
 /* ═══════════════════════════════════════════════
    COMPARATIF
 ═══════════════════════════════════════════════ */
+/* ── Utilitaires de formatage (tableau comparatif) ── */
+
+// Convertit des minutes en "mm:ss"
+// Ex : 45.5 min → "45:30"
+function fmtMmSs(minutes) {
+  if (!minutes && minutes !== 0) return '—';
+  const totalSec = Math.round(minutes * 60);
+  const mm = Math.floor(totalSec / 60);
+  const ss = totalSec % 60;
+  return `${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+
+// Convertit des minutes en "hh:mm:ss"
+// Ex : 90.5 min → "01:30:30"
+function fmtHhMmSs(minutes) {
+  if (!minutes && minutes !== 0) return '—';
+  const totalSec = Math.round(minutes * 60);
+  const hh = Math.floor(totalSec / 3600);
+  const mm = Math.floor((totalSec % 3600) / 60);
+  const ss = totalSec % 60;
+  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+
+// Formate la valeur SMR :
+// - si c'est un nombre pur → affiché tel quel (capacité passagers)
+// - si c'est une durée en minutes → format mm:ss
+function fmtSmr(val) {
+  if (val === null || val === undefined || val === '') return '—';
+  const n = parseFloat(val);
+  if (isNaN(n)) return String(val);
+  // Heuristique : si < 300, probablement une capacité (passagers)
+  // si >= 300 ou si val contient ":", c'est un temps en secondes/minutes
+  if (typeof val === 'string' && val.includes(':')) return fmtMmSs(n);
+  return String(n); // capacité numérique pure, pas d'unité
+}
+
+
+
+
 function computeKPIsAll(){
   if(!LINE || !LINE.scenarios || LINE.scenarios.length === 0) return [];
 
@@ -37,8 +76,15 @@ function computeKPIsAll(){
       const distInterMoy = LINE.inter.length > 0
         ? +(LINE.inter.reduce((a,b)=>a+b.dist,0) / LINE.inter.length).toFixed(0)
         : 0;
-      results.push({...k, sc, scIdx:i, tPrioA, tPrioR, tPrioTotal:tPrioA+tPrioR,
-                    moyMontees, moyDescentes, nStations, distInterMoy});
+      // Ne conserver que les scénarios nominaux dans le tableau comparatif
+if ((sc.type || 'NOMINAL').toUpperCase() !== 'NOMINAL') return;
+
+results.push({
+  ...k, sc, scIdx:i,
+  tPrioA, tPrioR, tPrioTotal: tPrioA + tPrioR,
+  moyMontees, moyDescentes, nStations, distInterMoy,
+  smrCapacite: sc.smrCapacite ?? null 
+});
     } catch(e){
       console.error(`[computeKPIsAll] erreur scénario ${i} (${sc?.id}):`, e);
     }
@@ -519,27 +565,35 @@ function _renderChargeYAxis(PAD, H, PH, yMax, py, dpr){
 /* ── SÉLECTEUR COLONNES TABLEAU SYNTHÈSE ── */
 // Toutes les colonnes disponibles avec leur clé et visibilité par défaut
 const ALL_COMP_COLS = [
-  {key:'vitA',         label:'Vit. Aller (km/h)',      labelEN:'Speed Out (km/h)',     higher:true,  fmt:v=>v.toFixed(1),           visible:true},
-  {key:'vitR',         label:'Vit. Retour (km/h)',     labelEN:'Speed In (km/h)',      higher:true,  fmt:v=>v.toFixed(1),           visible:true},
-  {key:'flotteNec',    label:'Flotte néc.',             labelEN:'Fleet',                higher:false, fmt:v=>v+' veh',               visible:true},
-  {key:'flotteTot',    label:'Flotte tot.',             labelEN:'Total Fleet',          higher:false, fmt:v=>v+' veh',               visible:true},
-  {key:'tCycleMin',    label:'Cycle (min)',             labelEN:'Cycle (min)',          higher:false, fmt:v=>v.toFixed(1),           visible:true},
-  {key:'freqHP',       label:'Fréq cible (min)',        labelEN:'Target freq (min)',    higher:false, fmt:v=>v+' min',               visible:true},
+  // ── Colonnes cochées par défaut ──
+  // Ordre : tAller, tRetour, Cycle, VitA, VitR, FlotteNec, FlotteTot, FreqHP, Entrées/Sorties, CapSMR, ...
+  {key:'tAllerMin',    label:'Temps aller',             labelEN:'Running time out',     higher:false, fmt:v=>fmtMmSs(v),             visible:true},
+  {key:'tRetourMin',   label:'Temps retour',            labelEN:'Running time in',      higher:false, fmt:v=>fmtMmSs(v),             visible:true},
+  {key:'tCycleMin',    label:'Cycle',                   labelEN:'Cycle',                higher:false, fmt:v=>fmtHhMmSs(v),           visible:true},
+  {key:'vitA',         label:'Vit. aller',              labelEN:'Speed out',            higher:true,  fmt:v=>v.toFixed(1),           visible:true},
+  {key:'vitR',         label:'Vit. retour',             labelEN:'Speed in',             higher:true,  fmt:v=>v.toFixed(1),           visible:true},
+  {key:'flotteNec',    label:'Flotte néc.',             labelEN:'Fleet',                higher:false, fmt:v=>String(v),              visible:true},
+  {key:'flotteTot',    label:'Flotte tot.',             labelEN:'Total fleet',          higher:false, fmt:v=>String(v),              visible:true},
+  {key:'freqHP',       label:'Fréq cible',              labelEN:'Target freq',          higher:false, fmt:v=>String(v),              visible:true},
   {key:'entrees',      label:'Entrées/Sorties dépôt',  labelEN:'Depot in/out',         higher:false, fmt:(v,k)=>`${v}/${k.sorties}`,visible:true},
-  {key:'moyMontees',   label:'Moy. montées/st',         labelEN:'Avg boardings/st',     higher:true,  fmt:v=>v>0?v.toFixed(2):'—',   visible:true},
-  {key:'moyDescentes', label:'Moy. descentes/st',       labelEN:'Avg alightings/st',    higher:true,  fmt:v=>v>0?v.toFixed(2):'—',   visible:true},
-  {key:'tPrioTotal',   label:'Priorité (min)',          labelEN:'Priority (min)',       higher:false, fmt:v=>v.toFixed(1),           visible:true},
-  {key:'coursesJour',  label:'Courses/jour',            labelEN:'Trips/day',            higher:true,  fmt:v=>v,                      visible:true},
-  // Colonnes optionnelles
-  {key:'nStations',    label:'Nb stations',             labelEN:'Nb stations',          higher:false, fmt:v=>v,                      visible:false},
-  {key:'distInterMoy', label:'Dist. moy. interst. (m)',  labelEN:'Avg inter-st (m)',    higher:false, fmt:v=>v+' m',                 visible:false},
-  {key:'kmCom',        label:'km comm./jour',           labelEN:'Comm. km/day',         higher:true,  fmt:v=>v+' km',                visible:false},
-  {key:'tArretTotal',  label:'Arrêts tot. (min)',       labelEN:'Total dwell (min)',    higher:false, fmt:v=>v.toFixed(1),           visible:false},
+  {key:'smrCapacite',  label:'Capacité SMR',            labelEN:'SMR capacity',         higher:false, fmt:(v,k)=>fmtSmr(v),          visible:true},
+  // ── Colonnes décochées par défaut ──
+  {key:'moyMontees',   label:'Moy. montées/st',         labelEN:'Avg boardings/st',     higher:true,  fmt:v=>v>0?v.toFixed(2):'—',   visible:false},
+  {key:'moyDescentes', label:'Moy. descentes/st',       labelEN:'Avg alightings/st',    higher:true,  fmt:v=>v>0?v.toFixed(2):'—',   visible:false},
+  {key:'tPrioTotal',   label:'Priorité',                labelEN:'Priority',             higher:false, fmt:v=>v.toFixed(1),           visible:true},
+  {key:'coursesJour',  label:'Courses/jour',            labelEN:'Trips/day',            higher:true,  fmt:v=>String(v),              visible:true},
+  // ── Colonnes masquées par défaut (existantes) ──
+  {key:'nStations',    label:'Nb stations',             labelEN:'Nb stations',          higher:false, fmt:v=>String(v),              visible:false},
+  {key:'distInterMoy', label:'Dist. moy. interst. (m)',labelEN:'Avg inter-st (m)',      higher:false, fmt:v=>String(v),              visible:false},
+  {key:'kmCom',        label:'km comm./jour',           labelEN:'Comm. km/day',         higher:true,  fmt:v=>String(v),              visible:false},
+  {key:'tArretTotal',  label:'Arrêts tot.',             labelEN:'Total dwell',          higher:false, fmt:v=>v.toFixed(1),           visible:false},
   {key:'totalDistKm',  label:'Distance ligne (km)',     labelEN:'Line length (km)',     higher:false, fmt:v=>v.toFixed(2),           visible:false},
 ];
 
 let _colPickerBuilt = false;
 function buildColPickerDropdown(){
+  // Reconstruire à chaque appel pour refléter l'état visible actuel
+  _colPickerBuilt = false; // ← forcer la reconstruction
   if(_colPickerBuilt) return;
   _colPickerBuilt = true;
   const dd = document.getElementById('colPickerDropdown');
@@ -882,40 +936,122 @@ function fsOpenCompTerminus(){
 }
 
 
-function renderCompTable(all){
+/* ── Variable d'état : affichage ligne Programme MOE ── */
+let _showProgrammeMOE = true; // cochée par défaut
+
+function toggleProgrammeMOE(checked) {
+  _showProgrammeMOE = checked;
+  if (LINE) renderCompTable(window._lastCompAll || []);
+}
+
+function renderCompTable(all) {
   window._lastCompAll = all;
   const tbl = document.getElementById('compTable');
-  if(!tbl) return;
+  if (!tbl) return;
   buildColPickerDropdown();
-  const COLS = ALL_COMP_COLS.filter(c=>c.visible).map(c=>({
+
+  const COLS = ALL_COMP_COLS.filter(c => c.visible).map(c => ({
     ...c, label: isEN ? c.labelEN : c.label
   }));
-  // Meilleur et pire par colonne
-  const best = COLS.map(c=>{
-    const vs = all.map(k=>k[c.key]||0);
+
+  // Meilleur et pire par colonne (sur nominaux seulement)
+  const best = COLS.map(c => {
+    const vs = all.map(k => parseFloat(k[c.key]) || 0);
     return c.higher ? Math.max(...vs) : Math.min(...vs);
   });
-  const worst = COLS.map(c=>{
-    const vs = all.map(k=>k[c.key]||0);
+  const worst = COLS.map(c => {
+    const vs = all.map(k => parseFloat(k[c.key]) || 0);
     return c.higher ? Math.min(...vs) : Math.max(...vs);
   });
-  const STK = 'position:sticky;left:0;z-index:2;background:var(--bg2)';
+
   const STK_TH = 'position:sticky;left:0;z-index:3;background:var(--bg4);';
   const STK_TD = 'position:sticky;left:0;z-index:1;background:var(--bg2);font-weight:700;color:var(--text);';
-  let html = `<thead><tr><th style="${STK_TH}">${isEN?'Scenario':'Scénario'}</th>${COLS.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead><tbody>`;
-  all.forEach((k,si)=>{
-    const isActive = si===currentSc;
-    html += `<tr class="${isActive?'active-sc':''}">`;
-    html += `<td style="position:sticky;left:0;z-index:1;background:var(--bg2);font-weight:700;">${k.sc.label}</td>`;
-    COLS.forEach((c,ci)=>{
-      const v = k[c.key]||0;
-      const cls = v===best[ci]?'best':v===worst[ci]&&all.length>1?'worst':'';
-      html += `<td class="${cls}">${c.fmt(v,k)}${v===best[ci]?' ▲':v===worst[ci]&&all.length>1?' ▼':''}</td>`;
+
+  let html = `<thead><tr>
+    <th style="${STK_TH}">${isEN ? 'Scenario' : 'Scénario'}</th>
+    ${COLS.map(c => `<th>${c.label}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  // Lignes scénarios nominaux
+  all.forEach((k, si) => {
+    const isActive = si === currentSc;
+    html += `<tr class="${isActive ? 'active-sc' : ''}">`;
+    html += `<td style="${STK_TD}">${k.sc.label}</td>`;
+    COLS.forEach((c, ci) => {
+      const v = k[c.key];
+      const vNum = parseFloat(v) || 0;
+      const cls = vNum === best[ci] ? 'best' : vNum === worst[ci] && all.length > 1 ? 'worst' : '';
+      const arrow = vNum === best[ci] ? ' ▲' : vNum === worst[ci] && all.length > 1 ? ' ▼' : '';
+      html += `<td class="${cls}">${c.fmt(v, k)}${arrow}</td>`;
     });
     html += '</tr>';
   });
+
+  // Ligne Programme MOE (si checkbox cochée)
+  if (_showProgrammeMOE) {
+    html += `<tr class="moe-row" style="background:var(--bg3);font-style:italic;">`;
+    html += `<td style="${STK_TD};background:var(--bg3);">Programme MOE</td>`;
+    COLS.forEach(c => {
+      // Valeur MOE : injecter ici la logique métier si disponible
+      // Par défaut : cellule vide extensible
+      const moeVal = LINE.programmeMOE ? (LINE.programmeMOE[c.key] ?? '—') : '—';
+      html += `<td>${moeVal}</td>`;
+    });
+    html += '</tr>';
+  }
+
   html += '</tbody>';
   tbl.innerHTML = html;
+}
+
+/* ── Export CSV du tableau comparatif ── */
+function exportCompTableCSV() {
+  const all = window._lastCompAll || [];
+  if (!all.length) return;
+
+  // Colonnes visibles uniquement
+  const COLS = ALL_COMP_COLS.filter(c => c.visible).map(c => ({
+    ...c, label: isEN ? c.labelEN : c.label
+  }));
+
+  // En-tête CSV
+  const headers = [isEN ? 'Scenario' : 'Scénario', ...COLS.map(c => c.label)];
+  const rows = [headers];
+
+  // Lignes scénarios
+  all.forEach(k => {
+    rows.push([
+      k.sc.label,
+      ...COLS.map(c => {
+        const v = k[c.key];
+        // Valeur brute pour CSV (sans ▲▼)
+        return c.fmt(v, k).replace(' ▲','').replace(' ▼','');
+      })
+    ]);
+  });
+
+  // Ligne Programme MOE si affichée
+  if (_showProgrammeMOE) {
+    rows.push([
+      'Programme MOE',
+      ...COLS.map(c => LINE.programmeMOE ? (LINE.programmeMOE[c.key] ?? '') : '')
+    ]);
+  }
+
+  // Génération du CSV
+  const csv = rows.map(r =>
+    r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(';')
+  ).join('\n');
+
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'comparaison_scenarios.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 

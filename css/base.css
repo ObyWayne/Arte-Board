@@ -72,6 +72,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .sc-btn.active{background:var(--green);color:#000;}
 .sc-btn:hover:not(.active){background:var(--bg4);color:var(--text);}
 
+/* Ligne Programme MOE dans le tableau comparatif */
+.moe-row td { color: var(--text2); border-top: 1px solid var(--border2); }
+
 /* ── Settings panel ── */
 .settings-panel{position:fixed;top:0px;right:0;width:300px;height:100vh;background:var(--bg2);border-left:1px solid var(--border);z-index:900;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:row;box-shadow:-4px 0 24px rgba(0,0,0,.35);}
 .settings-panel.open{transform:translateX(0);}

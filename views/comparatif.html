@@ -2,21 +2,34 @@
 
   <!-- ── Ligne 1 : Tableau synthèse (pleine largeur) ── -->
   <div class="chart-card comp-table-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
-      <div class="chart-card-title" id="compTableTitle" style="margin-bottom:0">Tableau synthèse</div>
-      <div style="display:flex;align-items:center;gap:.35rem;margin-left:auto;">
-        <div class="col-picker-wrap">
-          <button class="col-picker-btn" onclick="toggleColPicker(event)">⚙ Colonnes ▾</button>
-          <div class="col-picker-dropdown" id="colPickerDropdown"></div>
-        </div>
-        <button class="fs-btn" onclick="fsOpenCompTable()" title="Plein écran">⛶</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;gap:.35rem;flex-wrap:wrap;">
+    <div class="chart-card-title" id="compTableTitle" style="margin-bottom:0">Tableau synthèse</div>
+    <div style="display:flex;align-items:center;gap:.35rem;margin-left:auto;flex-wrap:wrap;">
+
+      <!-- Checkbox Programme MOE -->
+      <label style="display:flex;align-items:center;gap:.3rem;font-size:.62rem;font-weight:700;color:var(--text3);cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" checked onchange="toggleProgrammeMOE(this.checked)"
+          style="accent-color:var(--purple);cursor:pointer;">
+        Programme MOE
+      </label>
+
+      <!-- Sélecteur colonnes -->
+      <div class="col-picker-wrap">
+        <button class="col-picker-btn" onclick="toggleColPicker(event)">⚙ Colonnes ▾</button>
+        <div class="col-picker-dropdown" id="colPickerDropdown"></div>
       </div>
-    </div>
-    <!-- scroll horizontal interne uniquement -->
-    <div class="comp-table-scroll">
-      <table id="compTable" class="comp-synth-table"></table>
+
+      <!-- Bouton Export — même style que fs-btn -->
+      <button class="fs-btn" onclick="exportCompTableCSV()" title="Export CSV">⬇ CSV</button>
+
+      <!-- Plein écran -->
+      <button class="fs-btn" onclick="fsOpenCompTable()" title="Plein écran">⛶</button>
     </div>
   </div>
+  <div class="comp-table-scroll">
+    <table id="compTable" class="comp-synth-table"></table>
+  </div>
+</div>
 
   <!-- ── Ligne 2 col 1 : Montées / Descentes (2/4) ── -->
   <div class="chart-card comp-bubble-card">

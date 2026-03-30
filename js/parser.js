@@ -1251,10 +1251,11 @@ function enrichInterFromInfra(inter, stations, infra){
 function parseSingleScenario(wb, label){
   const ws = wb.Sheets['SCENARIOS'];
   let sc = {
-    id:label, label, type:'NOMINAL', coeff:1.1,
-    freqMin:10, freqHP:10, freqHC:15,
-    debutBloc:'', finBloc:'', mtA:'', mtR:'', labelSP:''
-  };
+  id:label, label, type:'NOMINAL', coeff:1.1,
+  freqMin:10, freqHP:10, freqHC:15,
+  debutBloc:'', finBloc:'', mtA:'', mtR:'', labelSP:'',
+  smrCapacite: null  
+};
   if(ws){
     const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
     // Cherche la 1ère ligne de données (après 2 lignes d'en-tête)
@@ -1273,8 +1274,10 @@ function parseSingleScenario(wb, label){
       sc.terA      = r[9]?String(r[9]).trim():'';
       sc.terR      = r[10]?String(r[10]).trim():'';
       sc.labelSP   = r[11]?String(r[11]).trim():'';
+      sc.smrCapacite = r[12] !== null && r[12] !== undefined ? r[12] : null;
       sc.label     = sc.labelSP || label;
       sc.freqMin   = sc.freqHP;
+      
       break;
     }
   }
