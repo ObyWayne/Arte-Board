@@ -54,8 +54,10 @@ function showEmptyState(){
   document.getElementById('footerLine').textContent = T('footerNoLine');
 
   // Scénario bar vide
-  const bar = document.getElementById('scBar');
-  bar.innerHTML = '<span class="scenario-bar-label">Scénario</span>';
+  const nomRow = document.getElementById('scNomRow');
+  const spRow  = document.getElementById('scSPRow');
+  if(nomRow) nomRow.innerHTML = '';
+  if(spRow)  spRow.innerHTML  = '';
 
   // KPIs vides
   ['kpiA','kpiAR','kpiR','kpiRR','kpiFreq','kpiFlotte','kpiDist'].forEach(id=>{
