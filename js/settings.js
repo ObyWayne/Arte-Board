@@ -30,7 +30,7 @@ function updateDirBtnLabels(){
 
 function setScenario(idx){
   currentSc = idx;
-  document.querySelectorAll('.sc-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  // document.querySelectorAll('.sc-btn').forEach((b,i)=>b.classList.toggle('active',i===idx)); // Mise à jour UI gérée par _selectNominal/_selectSP
 
   // Injecter les données du scénario sélectionné dans LINE
   if(LINE && LINE.scenariosData && LINE.scenariosData[idx]){
@@ -53,13 +53,15 @@ function setScenario(idx){
 }
 
 function toggleDark(){
-  isDark=!isDark;
-  document.body.classList.toggle('light-mode',!isDark);
+  isDark = !isDark;
+  document.body.classList.toggle('light-mode', !isDark);
+  // Sidebar knob
+  const knob = document.getElementById('darkKnob');
+  const lbl  = document.getElementById('darkLbl');
+  if(knob) knob.classList.toggle('light', !isDark);
+  if(lbl)  lbl.textContent = isDark ? 'dark' : 'light';
   drawClock();
   updateClockLegend();
-  document.getElementById('darkBtn').textContent=isDark?'🌙 Dark':'☀️ Light';
-  document.getElementById('darkBtn').classList.toggle('active',!isDark);
-  // Redessiner le canvas marche type si actif
   if(LINE && typeof renderMarcheType === 'function') renderMarcheType();
 }
 
@@ -218,7 +220,6 @@ function applyLang(){
   // Topbar
   const _ib=document.querySelector('.import-btn'); if(_ib) _ib.textContent=T('importBtn')||'📂 Import xlsx / zip';
   setTxt('topEtude',     T('topEtude'));
-  setTxt('langBtn',      isEN ? 'EN' : 'FR');
   set('importTitle',     T('importTitle'));
   set('importSlideTitle',T('importSlideTitle'));
   // Page header
@@ -286,7 +287,12 @@ function applyLang(){
 }
 
 function toggleLang(){
-  isEN=!isEN;
+  isEN = !isEN;
+  // Sidebar pill
+  const fr = document.getElementById('langFR');
+  const en = document.getElementById('langEN');
+  if(fr){ fr.classList.toggle('on', !isEN); fr.classList.toggle('off', isEN); }
+  if(en){ en.classList.toggle('on',  isEN); en.classList.toggle('off', !isEN); }
   applyLang();
 }
 

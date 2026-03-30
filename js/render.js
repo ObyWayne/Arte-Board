@@ -4,24 +4,86 @@
 ═══════════════════════════════════════════════ */
 function rebuildUI(){
   if(!LINE){ showEmptyState && showEmptyState(); return; }
+
   // Topbar
-  document.getElementById('topEtude').textContent=LINE.meta.etude||'Arte-board';
-  document.getElementById('topBadge').textContent=LINE.meta.badge||'';
-  document.getElementById('topBadge').style.display=LINE.meta.badge?'':'none';
-  document.getElementById('footerLine').textContent=LINE.meta.nomLigne||'';
-  // Direction buttons avec noms terminus
+  document.getElementById('topEtude').textContent = LINE.meta.etude || 'Arte-board';
+  document.getElementById('topBadge').textContent  = LINE.meta.badge || '';
+  document.getElementById('topBadge').style.display = LINE.meta.badge ? '' : 'none';
+  document.getElementById('footerLine').textContent = LINE.meta.nomLigne || '';
   updateDirBtnLabels();
 
-  // Scénario buttons
-  const bar=document.getElementById('scBar');
-  bar.innerHTML='<span class="scenario-bar-label" id="scBarLabel">Scénario</span>';
-  LINE.scenarios.forEach((sc,i)=>{
-    const btn=document.createElement('button');
-    btn.className='sc-btn'+(i===0?' active':'');
-    btn.textContent=sc.label;
-    btn.onclick=()=>setScenario(i);
-    bar.appendChild(btn);
+  // Construire SP_MAP : nomIdx -> [spIdx, ...]
+  const SP_MAP = {};
+  let lastNom = null;
+  LINE.scenarios.forEach((sc, i) => {
+    const type = (sc.type || 'NOMINAL').toUpperCase();
+    if(type === 'NOMINAL') {
+      lastNom = i;
+      SP_MAP[i] = [];
+    } else if(type === 'SP' && lastNom !== null) {
+      SP_MAP[lastNom].push(i);
+    }
   });
+  window._SP_MAP = SP_MAP;
+
+  // Ligne 1 : pills nominaux
+  const nomRow = document.getElementById('scNomRow');
+  if(nomRow) {
+    nomRow.innerHTML = '';
+    let firstNom = -1;
+    LINE.scenarios.forEach((sc, i) => {
+      const type = (sc.type || 'NOMINAL').toUpperCase();
+      if(type !== 'NOMINAL') return;
+      if(firstNom < 0) firstNom = i;
+      const pill = document.createElement('div');
+      pill.className = 'sc-pill sc-nom-pill' + (firstNom === i ? ' on' : '');
+      pill.dataset.idx = i;
+      pill.textContent = sc.label;
+      pill.onclick = () => _selectNominal(i);
+      nomRow.appendChild(pill);
+    });
+    if(firstNom >= 0) _buildSPRow(firstNom, true);
+  }
+}
+
+function _selectNominal(nomIdx) {
+  document.querySelectorAll('.sc-nom-pill').forEach(p => p.classList.remove('on'));
+  const pill = document.querySelector('.sc-nom-pill[data-idx="'+nomIdx+'"]');
+  if(pill) pill.classList.add('on');
+  _buildSPRow(nomIdx, true);
+}
+
+function _buildSPRow(nomIdx, autoSelectNom) {
+  const spRow = document.getElementById('scSPRow');
+  if(!spRow) return;
+  spRow.innerHTML = '';
+  const sps = (window._SP_MAP && window._SP_MAP[nomIdx]) || [];
+
+  // Pill "Nominal" toujours en premier
+  const nomPill = document.createElement('div');
+  nomPill.className = 'sc-pill sc-sp-pill on';
+  nomPill.dataset.idx = nomIdx;
+  nomPill.textContent = 'Nominal';
+  nomPill.onclick = () => _selectSP(nomPill, nomIdx);
+  spRow.appendChild(nomPill);
+
+  sps.forEach(spIdx => {
+    const sc = LINE.scenarios[spIdx];
+    const p = document.createElement('div');
+    p.className = 'sc-pill sc-sp-pill sp';
+    p.dataset.idx = spIdx;
+    p.textContent = sc.label;
+    p.onclick = () => _selectSP(p, spIdx);
+    spRow.appendChild(p);
+  });
+
+  if(autoSelectNom) setScenario(nomIdx);
+}
+
+function _selectSP(pill, idx) {
+  document.querySelectorAll('.sc-sp-pill').forEach(p => p.classList.remove('on'));
+  pill.classList.add('on');
+  setScenario(idx);
 }
 
 
