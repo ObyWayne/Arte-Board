@@ -39,6 +39,7 @@ function toggleOccupPct(){
 }
 let radarActiveScenarios  = null;
 let bubbleActiveSc = null; // index unique du scénario affiché dans le graphique montées/descentes
+let bubbleDir = 'aller'; // direction affichée dans le graphique montées/descentes
 
 const CX=50, DOT_R=8, TERM_R=11, ROW_H=58, ROW_R=40;
 const CARREFOUR_RATIO=0.20;

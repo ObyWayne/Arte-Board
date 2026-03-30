@@ -38,9 +38,17 @@
     <button class="fs-btn" onclick="fsOpenBubble()" title="Plein écran">⛶</button>
   </div>
   <!-- Sélecteur scénario : pills style projet, sélection unique -->
-  <div id="chargeScSelector"
-       style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:.3rem .5rem .2rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;min-height:28px;">
+  <div style="display:flex;align-items:center;gap:8px;padding:.3rem .5rem .2rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;flex-wrap:wrap;">
+  <!-- Sélecteur scénario (pills) -->
+  <div id="chargeScSelector" style="display:flex;flex-wrap:wrap;gap:5px;flex:1;"></div>
+  <!-- Bouton direction -->
+  <div style="display:flex;gap:4px;flex-shrink:0;">
+    <button class="dir-btn dir-btn-aller active" id="bubbleDirBtnA"
+            onclick="setBubbleDir('aller')">↓ Aller</button>
+    <button class="dir-btn dir-btn-retour" id="bubbleDirBtnR"
+            onclick="setBubbleDir('retour')">↑ Retour</button>
   </div>
+</div>
   <!-- Canvas : prend toute la hauteur restante du bloc -->
   <div style="display:flex;flex:1;min-height:0;">
     <canvas id="chargeAxisCanvas" style="flex-shrink:0;display:block;"></canvas>

@@ -70,8 +70,8 @@ function computeKPIsAll(){
       const tPrioA = LINE.inter.reduce((a,seg)=>a+(seg.tpsA||0),0)/60;
       const tPrioR = LINE.inter.reduce((a,seg)=>a+(seg.tpsR||0),0)/60;
       const nSt = LINE.stations.length || 1;
-      const moyMontees   = LINE.stations.reduce((a,s)=>a+(s.monteesA||0),0) / nSt;
-      const moyDescentes = LINE.stations.reduce((a,s)=>a+(s.descentesA||0),0) / nSt;
+      const moyMontees   = LINE.stations.reduce((a,s)=>a+(s.montees||0),0) / nSt;
+      const moyDescentes = LINE.stations.reduce((a,s)=>a+(s.descentes||0),0) / nSt;
       const nStations    = nSt;
       const distInterMoy = LINE.inter.length > 0
         ? +(LINE.inter.reduce((a,b)=>a+b.dist,0) / LINE.inter.length).toFixed(0)
@@ -155,6 +155,16 @@ function toggleRadarSc(idx){
 function selectBubbleSc(idx){
   bubbleActiveSc = idx;
   _buildBubbleScPills(window._lastBubbleAll || []);
+  if(LINE) renderBubbleChart(window._lastBubbleAll || [], bubbleActiveSc);
+}
+function setBubbleDir(dir){
+  bubbleDir = dir;
+  // Mise à jour visuelle des boutons
+  const btnA = document.getElementById('bubbleDirBtnA');
+  const btnR = document.getElementById('bubbleDirBtnR');
+  if(btnA){ btnA.classList.toggle('active', dir === 'aller'); }
+  if(btnR){ btnR.classList.toggle('active', dir === 'retour'); }
+  // Recalcul avec la nouvelle direction
   if(LINE) renderBubbleChart(window._lastBubbleAll || [], bubbleActiveSc);
 }
 
@@ -410,17 +420,24 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx){
   const sts = LINE.scenariosData ? LINE.scenariosData[k.scIdx].stations : LINE.stations;
 
   // ── Données par station ──
-  const stationNames = sts.map(s => s.nom);
-  const monteesA   = sts.map(s => s.monteesA   || 0);
-  const descentesA = sts.map(s => s.descentesA || 0);
+  // Données selon direction sélectionnée
+const isAller  = (bubbleDir === 'aller');
+const montees   = sts.map(s => isAller ? (s.montees   || 0) : (s.monteesR   || 0));
+const descentes = sts.map(s => isAller ? (s.descentes || 0) : (s.descentesR || 0));
 
-  // Courbe charge cumulée : part de 0, +montées -descentes
-  const chargeCum = [];
-  let cur = 0;
-  for(let i = 0; i < sts.length; i++){
-    cur += monteesA[i] - descentesA[i];
-    chargeCum.push(cur);
-  }
+// Courbe charge cumulée : part de 0, +montées -descentes
+const chargeCum = [];
+let cur = 0;
+for(let i = 0; i < sts.length; i++){
+  cur += montees[i] - descentes[i];
+  chargeCum.push(cur);
+}
+
+// Montées = primaire1, Descentes = primaire2
+const COL_MONTEES   = BRAND.primaire1 || '#a06bff';
+const COL_DESCENTES = BRAND.primaire2 || '#3ecf6a';
+// Courbe charge = couleur aller ou retour selon direction
+const COL_CHARGE    = isAller ? (BRAND.aller || '#4a9eff') : (BRAND.retour || '#f5a623');
 
   // ── Lignes dw (formule charge) ──
   const freqMin = sc.freqHP || sc.freqMin || 6;
@@ -451,15 +468,30 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx){
   ctx.clearRect(0, 0, W, H);
 
   // ── Échelle Y1 (barres montées/descentes) ──
-  let yMax1 = Math.max(...monteesA, ...descentesA, 1);
+  let yMax1 = Math.max(...montees, ...descentes, 1);
   yMax1 = Math.ceil(yMax1 * 1.15 / 10) * 10;
   const py1 = v => PAD.t + PH - (v / yMax1) * PH;
   const bH1 = v => (v / yMax1) * PH;
 
   // ── Échelle Y2 (charge cumulée + lignes dw) ──
-  const allY2 = [...chargeCum, ...dwLines];
-  let yMax2 = Math.ceil(Math.max(...allY2) * 1.15 / 50) * 50 || 100;
-  let yMin2 = Math.min(0, Math.floor(Math.min(...chargeCum) * 1.1 / 50) * 50);
+  // Y2 figé : calculé une seule fois par scénario, pas recalculé au changement de direction
+// On prend le max global des deux directions pour figer l'échelle
+const allY2vals = [
+  ...sts.map(s => s.monteesA||0), ...sts.map(s => s.descentesA||0),
+  ...sts.map(s => s.monteesR||0), ...sts.map(s => s.descentesR||0),
+];
+let cumMax = 0, cumMin = 0, runMax = 0, runMin = 0;
+['aller','retour'].forEach(dir => {
+  let c = 0;
+  sts.forEach((s,i) => {
+    c += (dir==='aller' ? (s.monteesA||0) - (s.descentesA||0) : (s.monteesR||0) - (s.descentesR||0));
+    cumMax = Math.max(cumMax, c);
+    cumMin = Math.min(cumMin, c);
+  });
+});
+const allY2 = [...dwLines, cumMax, cumMin];
+let yMax2 = Math.ceil(Math.max(...allY2) * 1.15 / 50) * 50 || 100;
+let yMin2 = Math.min(0, Math.floor(Math.min(...allY2) * 1.1 / 50) * 50);
   const py2 = v => PAD.t + PH - ((v - yMin2) / (yMax2 - yMin2)) * PH;
 
   // ── Grille Y1 (lignes horizontales) ──
@@ -482,12 +514,11 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx){
     const xBase = PAD.l + si * stW;
 
     // Montées ↑
-    const vA = monteesA[si];
+    const vA = montees[si];
     if(vA > 0){
-      ctx.fillStyle = COL_A + '66';
+      ctx.fillStyle = COL_MONTEES + '66';
       ctx.fillRect(xBase, py1(vA), BAR_W, bH1(vA));
-      ctx.strokeStyle = COL_A;
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = COL_MONTEES;
       ctx.strokeRect(xBase, py1(vA), BAR_W, bH1(vA));
       ctx.fillStyle = 'rgba(200,210,230,.8)';
       ctx.font = 'bold 11px "Barlow Condensed",sans-serif';
@@ -496,12 +527,12 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx){
     }
 
     // Descentes ↓
-    const vR = descentesA[si];
+    const vR = descentes[si];
     const xR = xBase + BAR_W + GRP_GAP;
     if(vR > 0){
-      ctx.fillStyle = COL_R + '66';
+      ctx.fillStyle = COL_DESCENTES + '66';
       ctx.fillRect(xR, py1(vR), BAR_W, bH1(vR));
-      ctx.strokeStyle = COL_R;
+      ctx.strokeStyle = COL_DESCENTES;
       ctx.lineWidth = 1.5;
       ctx.strokeRect(xR, py1(vR), BAR_W, bH1(vR));
       ctx.fillStyle = 'rgba(200,210,230,.8)';
@@ -523,7 +554,6 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx){
   });
 
   // ── Courbe charge cumulée (Y2, violet) ──
-  const COL_CHARGE = BRAND.primaire1 || '#a06bff';
   ctx.beginPath();
   stationNames.forEach((_, si) => {
     const xCenter = PAD.l + si * stW + BAR_W + GRP_GAP / 2;
@@ -615,7 +645,7 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx){
     if(best < 0 || bestDist > stW) {
       _hideBubbleTooltip(); return;
     }
-    _showBubbleTooltip(e, stationNames[best], monteesA[best], descentesA[best], chargeCum[best]);
+    _showBubbleTooltip(e, stationNames[best], montees[best], descentes[best], chargeCum[best]);
   };
   canvas.onmouseleave = () => _hideBubbleTooltip();
 }
@@ -670,9 +700,26 @@ function _renderBubbleYAxis(PAD, H, PH, yMax, py, dpr){
   axisCanvas.style.width  = AW + 'px';
   axisCanvas.style.height = H  + 'px';
   const axCtx = axisCanvas.getContext('2d');
+  axCtx.save();
+  axCtx.translate(11, PAD.t + PH / 2);
+  axCtx.rotate(-Math.PI / 2);
+  // Couleur texte adaptative dark/light
+  const isDarkMode = document.body.classList.contains('light-mode') ? false : true;
+  axCtx.fillStyle = isDarkMode ? 'rgba(180,190,220,.55)' : 'rgba(60,70,90,.7)';
+  axCtx.font = '600 9px "Barlow Condensed",sans-serif';
+  axCtx.textAlign = 'center';
+  axCtx.fillText('Montées / Descentes', 0, 0);
+  axCtx.restore();
   axCtx.scale(dpr, dpr);
   axCtx.clearRect(0, 0, AW, H);
-  const bgCol = getComputedStyle(document.body).getPropertyValue('--bg2').trim() || '#1f2435';
+  
+  // Lire la vraie couleur de fond en temps réel (dark/light)
+  const bgCol = getComputedStyle(document.documentElement)
+  .getPropertyValue('--bg2').trim() ||
+  getComputedStyle(document.body).getPropertyValue('--bg2').trim() ||
+  '#1f2435';
+  axCtx.fillStyle = bgCol || 'transparent';
+  axCtx.fillRect(0, 0, AW, H);
   axCtx.fillStyle = bgCol; axCtx.fillRect(0, 0, AW, H);
   for(let t = 0; t <= 5; t++){
     const v = yMax / 5 * t, y = py(v);
