@@ -913,7 +913,9 @@ function renderCompTerminus(all){
         .map(d => d.scIdx)
     );
   }
-  const scData = all.filter(d => _termCmpScFilter.has(d.scIdx));
+  const scData = _termCmpScFilter
+  ? scTermData.filter(d => _termCmpScFilter.has(d.scIdx))
+  : scTermData;
 
   // Collecte toutes les catégories dans l'ordre d'apparition
   const allCats = [];
@@ -987,8 +989,8 @@ function renderCompTerminus(all){
     </label>`;
   }).join('');
 
-  const scOpts = all.map(d => {
-    const chk = _termCmpScFilter.has(d.scIdx) ? 'checked' : '';
+  const scOpts = scTermData.map(d => {
+  const chk = _termCmpScFilter.has(d.scIdx) ? 'checked' : '';
     const isSP = (d.sc.type||'NOMINAL').toUpperCase() !== 'NOMINAL';
     return `<label class="col-picker-item">
       <input type="checkbox" ${chk} onchange="_termCmpScCh(event,${d.scIdx})">
@@ -1153,8 +1155,10 @@ window._termCmpScCh = function(evt, scIdx){
   if(!_termCmpScFilter){
     const all = window._lastCompAll || [];
     _termCmpScFilter = new Set(
-      all.filter(d => (d.sc.type||'NOMINAL').toUpperCase() === 'NOMINAL').map(d => d.scIdx)
-    );
+  scTermData
+    .filter(d => (d.sc.type||'NOMINAL').toUpperCase() === 'NOMINAL')
+    .map(d => d.scIdx)
+);
   }
   evt.target.checked
     ? _termCmpScFilter.add(scIdx)
