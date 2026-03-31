@@ -820,314 +820,375 @@ document.addEventListener('click', e=>{
 
 
 /* ═══════════════════════════════════════════════
-   COMPARAISON TERMINUS
+   COMPARAISON TERMINUS — Histogramme empilé
 ═══════════════════════════════════════════════ */
 
-let _termCmpTermFilter = null;
-let _termCmpScFilter   = null;
-let TERM_CATEGORIES = []; // from master PARAMETRE sheet B2:BXX
+let _termCmpTermFilter = null; // Set de noms de terminus sélectionnés (null = tous)
+let _termCmpScFilter   = null; // Set de scIdx sélectionnés (null = tous nominaux)
+
+// Palettes couleur par catégorie — index stable, même ordre que d'arrivée
+const _TERM_CAT_COLORS = [
+  '#4a9eff', // bleu
+  '#3ecf6a', // vert
+  '#f5a623', // orange
+  '#a06bff', // violet
+  '#cf3e9e', // rose
+  '#e8453c', // rouge
+  '#22d3ee', // cyan
+  '#84cc16', // lime
+];
+
+/* Retourne la couleur hex assignée à une catégorie (ordre stable) */
+function _termCatColor(catName, orderedCats){
+  const idx = orderedCats.indexOf(catName);
+  return _TERM_CAT_COLORS[idx >= 0 ? idx : 0];
+}
+
+/* Crée un CanvasPattern hachuré pour les segments compressibles */
+function _makeHatchPattern(col){
+  const c = document.createElement('canvas');
+  c.width = 7; c.height = 7;
+  const cx = c.getContext('2d');
+  // Fond très léger
+  cx.fillStyle = col + '22';
+  cx.fillRect(0, 0, 7, 7);
+  // Diagonales
+  cx.strokeStyle = col;
+  cx.lineWidth = 1.2;
+  cx.beginPath(); cx.moveTo(0,7); cx.lineTo(7,0); cx.stroke();
+  cx.beginPath(); cx.moveTo(-1,1); cx.lineTo(1,-1); cx.stroke();
+  cx.beginPath(); cx.moveTo(6,8); cx.lineTo(8,6); cx.stroke();
+  // Créer le pattern via un canvas temporaire
+  const tmp = document.createElement('canvas').getContext('2d');
+  return tmp.createPattern(c, 'repeat');
+}
 
 /* Collecte toutes les données terminus pour tous les scénarios */
 function _getScTermData(all){
-  const saved={stations:LINE.stations,inter:LINE.inter,retournement:LINE.retournement,
-    tendu:LINE.tendu,tenduR:LINE.tenduR,detenteA:LINE.detenteA,detenteR:LINE.detenteR};
-  const result = all.map(k=>{
-    if(LINE.scenariosData&&LINE.scenariosData[k.scIdx]){
-      const d=LINE.scenariosData[k.scIdx];
-      LINE.stations=d.stations;LINE.inter=d.inter;LINE.retournement=d.retournement;
-      LINE.tendu=d.tendu;LINE.tenduR=d.tenduR;LINE.detenteA=d.detenteA;LINE.detenteR=d.detenteR;
+  const saved = {
+    stations:LINE.stations, inter:LINE.inter, retournement:LINE.retournement,
+    tendu:LINE.tendu, tenduR:LINE.tenduR, detenteA:LINE.detenteA, detenteR:LINE.detenteR
+  };
+  const result = all.map(k => {
+    if(LINE.scenariosData && LINE.scenariosData[k.scIdx]){
+      const d = LINE.scenariosData[k.scIdx];
+      LINE.stations=d.stations; LINE.inter=d.inter; LINE.retournement=d.retournement;
+      LINE.tendu=d.tendu; LINE.tenduR=d.tenduR; LINE.detenteA=d.detenteA; LINE.detenteR=d.detenteR;
     }
-    const tsc=getTerminusForSc(k.scIdx);
-    return {sc:k.sc,scIdx:k.scIdx,termA:tsc.termA,retA:tsc.retA,termR:tsc.termR,retR:tsc.retR};
+    const tsc = getTerminusForSc(k.scIdx);
+    return {sc:k.sc, scIdx:k.scIdx, termA:tsc.termA, retA:tsc.retA, termR:tsc.termR, retR:tsc.retR};
   });
-  Object.assign(LINE,saved);
+  Object.assign(LINE, saved);
   return result;
 }
 
-/* Occ → style */
-function _occStyle(occ, label){
-  const k=(occ||label||'').toLowerCase();
-  if(k.includes('arriv')||k.includes('descent')) return {emoji:'🚶',col:BRAND.aller||'#4a9eff'};
-  if(k.includes('depart')||k.includes('départ')||k.includes('monter')||k.includes('montée')) return {emoji:'🚶',col:BRAND.primaire2||'#3ecf6a'};
-  if(k.includes('manoe')||k.includes('manoeu')||k.includes('retour')) return {emoji:'🔧',col:BRAND.primaire1||'#a06bff'};
-  if(k.includes('pause')||k.includes('attente')) return {emoji:'⏸',col:BRAND.retour||'#f5a623'};
-  return {emoji:'🕐',col:BRAND.cycle||'#cf3e9e'};
-}
-
-/* ═══ Treemap hiérarchique catégorie > sous-catégorie ═══ */
-
-// Category color palettes: each cat gets a hue, sub-cats get variants
-const _CAT_PALETTES = [
-  ['#3b82f6','#60a5fa','#93c5fd','#bfdbfe'],  // blue family
-  ['#10b981','#34d399','#6ee7b7','#a7f3d0'],  // green family
-  ['#f59e0b','#fbbf24','#fcd34d','#fde68a'],  // amber family
-  ['#8b5cf6','#a78bfa','#c4b5fd','#ddd6fe'],  // violet family
-  ['#ef4444','#f87171','#fca5a5','#fecaca'],  // red family
-  ['#06b6d4','#22d3ee','#67e8f9','#a5f3fc'],  // cyan family
-  ['#ec4899','#f472b6','#f9a8d4','#fbcfe8'],  // pink family
-  ['#84cc16','#a3e635','#bef264','#d9f99d'],  // lime family
-];
-const _CAT_EMOJIS = ['🚶','🔧','⏸','🚌','🔄','🏁','⚡','🛤️'];
-
-function _buildTreemap(ret){
-  const W=220, H=110;
-  if(!ret||!ret.params||!ret.totalSec)
-    return `<div style="width:${W}px;height:${H}px;background:var(--bg4);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:.55rem;">—</div>`;
-
-  const total  = ret.totalSec;
-  const params = ret.params.filter(p=>p.sec>0);
-
-  // Group by category (col G) or fallback to Occ
-  const catOrder = TERM_CATEGORIES.length ? TERM_CATEGORIES : [];
-  const catMap   = new Map(); // catName → {sec, subs:[{label,sec,col}]}
-
-  params.forEach(p=>{
-    const cat = (p.categorie||p.occ||p.label||'Autre').trim() || 'Autre';
-    if(!catMap.has(cat)) catMap.set(cat, {sec:0, subs:[]});
-    const entry = catMap.get(cat);
-    entry.sec  += p.sec;
-    entry.subs.push({label:p.label, sec:p.sec});
-  });
-
-  // Order categories: first by TERM_CATEGORIES order, then remainder
-  const orderedCats = [];
-  catOrder.forEach(n=>{ if(catMap.has(n)) orderedCats.push(n); });
-  catMap.forEach((_,n)=>{ if(!orderedCats.includes(n)) orderedCats.push(n); });
-
-  // Assign palette per category
-  const catStyles = {};
-  orderedCats.forEach((n,i)=>{
-    const pal = _CAT_PALETTES[i % _CAT_PALETTES.length];
-    const emoji = _CAT_EMOJIS[i % _CAT_EMOJIS.length];
-    catStyles[n] = {pal, emoji};
-  });
-
-  /* ── Squarified-style layout (simplified row algorithm) ──
-     Splits horizontally by category weight, then vertically for sub-cats */
-  let html = '';
-  let xCursor = 0;
-
-  orderedCats.forEach(catName => {
-    const entry  = catMap.get(catName);
-    const catW   = W * (entry.sec / total);
-    const style  = catStyles[catName];
-    const catPct = Math.round(entry.sec/total*100);
-    const catTip = `${style.emoji} ${catName}: ${fmtMin(entry.sec/60)} (${catPct}%)`;
-
-    // Draw category label bar (top 14px)
-    const catLblH = 18;
-    const innerH  = H - catLblH;
-    const fs      = Math.min(11, Math.max(7, Math.floor(catW/catName.length*1.4)));
-
-    html += `<div style="position:absolute;left:${xCursor.toFixed(1)}px;top:0;width:${catW.toFixed(1)}px;height:${catLblH}px;
-      background:${style.pal[0]};display:flex;align-items:center;justify-content:center;
-      border-right:1px solid var(--bg2);box-sizing:border-box;cursor:pointer;transition:opacity .12s,filter .12s;"
-      data-label="${catName}"
-      data-val="${fmtMin(entry.sec/60)}"
-      data-pct="${catPct}"
-      data-col="${style.pal[0]}"
-      data-icon="${style.emoji}"
-      onmouseenter="termTreeEnter(this,event)" onmouseleave="termTreeLeave(this)">
-      <span style="font-size:${fs}px;font-weight:800;color:#fff;overflow:hidden;white-space:nowrap;
-        text-overflow:ellipsis;padding:0 2px;pointer-events:none;">
-        ${catW>30?style.emoji+' ':''}${catW>50?catName:''}
-      </span>
-    </div>`;
-
-    // Sub-categories: stack vertically
-    let yCursor = catLblH;
-    const subs  = entry.subs.filter(s=>s.sec>0);
-    subs.forEach((sub, si) => {
-      const subH   = si<subs.length-1 ? innerH*(sub.sec/entry.sec) : (H - yCursor);
-      const subCol = style.pal[Math.min(si+1, style.pal.length-1)];
-      const subPct = Math.round(sub.sec/total*100);
-      const subTip = `${style.emoji} ${catName} › ${sub.label}: ${fmtMin(sub.sec/60)} (${subPct}%)`;
-
-      html += `<div style="position:absolute;left:${xCursor.toFixed(1)}px;top:${yCursor.toFixed(1)}px;
-        width:${catW.toFixed(1)}px;height:${subH.toFixed(1)}px;
-        background:${subCol};opacity:.9;box-sizing:border-box;
-        border-right:1px solid var(--bg2);border-bottom:1px solid var(--bg2);
-        display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .12s,filter .12s;"
-        data-label="${catName} › ${sub.label}"
-        data-val="${fmtMin(sub.sec/60)}"
-        data-pct="${subPct}"
-        data-col="${subCol}"
-        data-icon="${style.emoji}"
-        onmouseenter="termTreeEnter(this,event)" onmouseleave="termTreeLeave(this)">
-        ${subH>18&&catW>28?`<span style="font-size:8px;font-weight:700;pointer-events:none;color:rgba(0,0,0,.75);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 3px;">${catW>50?sub.label:''}</span>`:''}
-      </div>`;
-      yCursor += subH;
-    });
-
-    xCursor += catW;
-  });
-
-  return `<div style="position:relative;width:${W}px;height:${H}px;border-radius:4px;overflow:hidden;border:1px solid var(--border);">${html}</div>`;
-}
-
-
-function termTreeEnter(el, evt){
-  el.style.opacity='1';
-  el.style.filter='brightness(1.25)';
-  const tt=document.getElementById('pieTooltip');
-  tt.style.background=el.dataset.col;
-  document.getElementById('ptIcon').textContent=el.dataset.icon;
-  document.getElementById('ptLabel').textContent=el.dataset.label;
-  document.getElementById('ptVal').textContent=el.dataset.val;
-  document.getElementById('ptPct').textContent=el.dataset.pct+'%';
-  tt.style.display='block';
-  _movePieTooltip(evt);
-  el.addEventListener('mousemove',_movePieTooltip);
-}
-function termTreeLeave(el){
-  el.style.opacity='.82';
-  el.style.filter='';
-  document.getElementById('pieTooltip').style.display='none';
-  el.removeEventListener('mousemove',_movePieTooltip);
-}
-
+/* Rendu principal */
 function renderCompTerminus(all){
-  const el=document.getElementById('compTermContent');
-  if(!el)return;
-  if(!all||!all.length||!LINE){el.innerHTML='<div style="color:var(--text3);font-size:.6rem;padding:.5rem;">—</div>';return;}
+  const el = document.getElementById('compTermContent');
+  if(!el) return;
+  if(!all || !all.length || !LINE){
+    el.innerHTML = '<div style="color:var(--text3);font-size:.6rem;padding:.5rem;">—</div>';
+    return;
+  }
 
-  const scTermData=_getScTermData(all);
+  const scTermData = _getScTermData(all);
 
-  // All unique terminus names
-  const allTermNames=[];
-  const seenT=new Set();
-  scTermData.forEach(d=>[d.termA,d.termR].forEach(n=>{if(!seenT.has(n)){seenT.add(n);allTermNames.push(n);}}));
+  // Tous les noms de terminus uniques
+  const allTermNames = [];
+  const seenT = new Set();
+  scTermData.forEach(d => [d.termA, d.termR].forEach(n => {
+    if(!seenT.has(n)){ seenT.add(n); allTermNames.push(n); }
+  }));
 
-  // Apply filters
-  const termNames=_termCmpTermFilter?allTermNames.filter(n=>_termCmpTermFilter.has(n)):allTermNames;
-  const scData=_termCmpScFilter?scTermData.filter(d=>_termCmpScFilter.has(d.scIdx)):scTermData;
+  // Filtres actifs
+  const termNames = _termCmpTermFilter
+    ? allTermNames.filter(n => _termCmpTermFilter.has(n))
+    : allTermNames;
 
-  // SC colors
-  const SC_COLORS=[BRAND.aller,BRAND.retour,BRAND.primaire2,BRAND.cycle,BRAND.primaire1,'#e8453c'];
+  // Par défaut : scénarios nominaux uniquement (pas SP*)
+  if(!_termCmpScFilter){
+    _termCmpScFilter = new Set(
+      all
+        .filter(d => (d.sc.type||'NOMINAL').toUpperCase() === 'NOMINAL')
+        .map(d => d.scIdx)
+    );
+  }
+  const scData = all.filter(d => _termCmpScFilter.has(d.scIdx));
 
-  // ── Global legend by category ──
-  const catLegMap = new Map();
-  scTermData.forEach(d=>[d.retA,d.retR].forEach(ret=>{
-    if(!ret||!ret.params)return;
-    ret.params.forEach(p=>{
-      const catName=(p.categorie||p.occ||p.label||'Autre').trim()||'Autre';
-      const catOrder2=TERM_CATEGORIES.length?TERM_CATEGORIES:[];
-      const ordIdx=catOrder2.indexOf(catName)>=0?catOrder2.indexOf(catName):[...catLegMap.keys()].length;
-      const pal=_CAT_PALETTES[ordIdx%_CAT_PALETTES.length];
-      const emoji=_CAT_EMOJIS[ordIdx%_CAT_EMOJIS.length];
-      if(!catLegMap.has(catName)) catLegMap.set(catName,{emoji,col:pal[0],subs:new Map()});
-      const catEntry=catLegMap.get(catName);
-      if(!catEntry.subs.has(p.label)){
-        const subIdx=catEntry.subs.size;
-        catEntry.subs.set(p.label,{col:pal[Math.min(subIdx+1,pal.length-1)]});
-      }
+  // Collecte toutes les catégories dans l'ordre d'apparition
+  const allCats = [];
+  scTermData.forEach(d => [d.retA, d.retR].forEach(ret => {
+    if(!ret || !ret.params) return;
+    ret.params.forEach(p => {
+      const cat = (p.categorie || p.occ || p.label || 'Autre').trim() || 'Autre';
+      if(!allCats.includes(cat)) allCats.push(cat);
     });
   }));
-  const legend=[...catLegMap.entries()].map(([catName,catData])=>
-    `<div style="display:flex;flex-direction:column;gap:.2rem;">
-      <div style="display:flex;align-items:center;gap:.3rem;font-size:.55rem;font-weight:800;color:var(--text);font-family:var(--fontb);">
-        <div style="width:12px;height:12px;border-radius:2px;background:${catData.col};flex-shrink:0;"></div>${catData.emoji} ${catName}
+  // Fallback si aucune catégorie
+  if(!allCats.length) allCats.push('Temps');
+
+  // ── Labels axe X : une entrée (terminus + scénario) par barre,
+  //    séparateur vide entre groupes de terminus ──
+  const xLabels = [];
+  const barMeta = []; // {termNom, scIdx, ret} ou null pour séparateur
+  termNames.forEach((tNom, ti) => {
+    scData.forEach(d => {
+      const ret = (d.termA === tNom) ? d.retA : (d.termR === tNom) ? d.retR : null;
+      xLabels.push([tNom, d.sc.label]); // tableau = multi-ligne Chart.js
+      barMeta.push({tNom, scIdx:d.scIdx, ret});
+    });
+    // Espace vide entre groupes (sauf après le dernier)
+    if(ti < termNames.length - 1){
+      xLabels.push('');
+      barMeta.push(null);
+    }
+  });
+
+  // ── Datasets : un dataset par (catégorie × compressible) ──
+  const datasets = [];
+  allCats.forEach(cat => {
+    [false, true].forEach(compressible => {
+      const col  = _termCatColor(cat, allCats);
+      let   bg;
+      if(compressible){
+        const pat = _makeHatchPattern(col);
+        bg = pat || (col + '55');
+      } else {
+        bg = col + 'cc';
+      }
+      const data = barMeta.map(m => {
+        if(!m || !m.ret || !m.ret.params) return null;
+        const total = m.ret.params
+          .filter(p => {
+            const pCat = (p.categorie || p.occ || p.label || 'Autre').trim() || 'Autre';
+            return pCat === cat && (p.compressible === true) === compressible;
+          })
+          .reduce((a, p) => a + (p.sec || 0), 0);
+        return total > 0 ? Math.round(total / 60 * 10) / 10 : null;
+      });
+      datasets.push({
+        label: cat + (compressible ? ' (comp.)' : ' (incomp.)'),
+        data,
+        backgroundColor: bg,
+        borderColor: col,
+        borderWidth: 0.8,
+        stack: 's',
+        _cat: cat,
+        _compressible: compressible,
+      });
+    });
+  });
+
+  // ── Dropdowns filtres ──
+  const termOpts = allTermNames.map(n => {
+    const chk = (!_termCmpTermFilter || _termCmpTermFilter.has(n)) ? 'checked' : '';
+    return `<label class="col-picker-item">
+      <input type="checkbox" ${chk} onchange="_termCmpTermCh(event,'${n.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"> ${n}
+    </label>`;
+  }).join('');
+
+  const scOpts = all.map(d => {
+    const chk = _termCmpScFilter.has(d.scIdx) ? 'checked' : '';
+    const isSP = (d.sc.type||'NOMINAL').toUpperCase() !== 'NOMINAL';
+    return `<label class="col-picker-item">
+      <input type="checkbox" ${chk} onchange="_termCmpScCh(event,${d.scIdx})">
+      ${d.sc.label}${isSP ? ' <span style="opacity:.5;font-size:.85em;">SP</span>' : ''}
+    </label>`;
+  }).join('');
+
+  // ── Légende ──
+  const legCats = allCats.map(cat => {
+    const col = _termCatColor(cat, allCats);
+    return `<span style="display:flex;align-items:center;gap:4px;font-size:.6rem;color:var(--text2);">
+      <span style="width:10px;height:10px;border-radius:2px;background:${col}cc;border:1px solid ${col};flex-shrink:0;"></span>
+      ${cat}
+    </span>`;
+  }).join('');
+  const legHatch = `
+    <span style="display:flex;align-items:center;gap:4px;font-size:.6rem;color:var(--text3);">
+      <span style="width:10px;height:10px;border-radius:2px;background:rgba(120,120,120,.12);border:1px dashed #888;
+        background-image:repeating-linear-gradient(45deg,#888 0,#888 1px,transparent 0,transparent 50%);
+        background-size:5px 5px;flex-shrink:0;"></span>Compressible
+    </span>
+    <span style="display:flex;align-items:center;gap:4px;font-size:.6rem;color:var(--text3);">
+      <span style="width:10px;height:10px;border-radius:2px;background:#888cc;border:1px solid #888;flex-shrink:0;"></span>Incompressible
+    </span>`;
+
+  // ── HTML conteneur ──
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.6rem;">
+      <div class="col-picker-wrap">
+        <button class="col-picker-btn" onclick="_toggleTermPicker(event,'_tcp1')">🚉 Terminus ▾</button>
+        <div class="col-picker-dropdown" id="_tcp1">${termOpts}</div>
       </div>
-      ${[...catData.subs.keys()].map(subLbl=>
-        `<div style="font-size:.48rem;color:var(--text3);font-family:var(--fontb);padding-left:.9rem;line-height:1.5;">• ${subLbl}</div>`
-      ).join('')}
-    </div>`
-  ).join('');
-
-  // ── Filter dropdowns — use absolute positioned dropdown inside relative wrapper ──
-  const termOpts=allTermNames.map(n=>{
-    const chk=(!_termCmpTermFilter||_termCmpTermFilter.has(n))?'checked':'';
-    return `<label class="col-picker-item"><input type="checkbox" ${chk} onchange="_termCmpTermCh(event,'${n.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')"> ${n}</label>`;
-  }).join('');
-  const scOpts=all.map((d,i)=>{
-    const chk=(!_termCmpScFilter||_termCmpScFilter.has(d.scIdx))?'checked':'';
-    return `<label class="col-picker-item"><input type="checkbox" ${chk} onchange="_termCmpScCh(event,${d.scIdx})"> ${d.sc.label}</label>`;
-  }).join('');
-
-  const filters=`<div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.6rem;">
-    <div class="col-picker-wrap">
-      <button class="col-picker-btn" onclick="_toggleTermPicker(event,'_tcp1')">🚉 Terminus ▾</button>
-      <div class="col-picker-dropdown" id="_tcp1">${termOpts}</div>
+      <div class="col-picker-wrap">
+        <button class="col-picker-btn" onclick="_toggleTermPicker(event,'_tcp2')">📋 Scénarios ▾</button>
+        <div class="col-picker-dropdown" id="_tcp2">${scOpts}</div>
+      </div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-left:auto;">
+        ${legCats}
+        <span style="width:1px;height:14px;background:var(--border);display:inline-block;margin:0 2px;"></span>
+        ${legHatch}
+      </div>
     </div>
-    <div class="col-picker-wrap">
-      <button class="col-picker-btn" onclick="_toggleTermPicker(event,'_tcp2')">📋 Scénarios ▾</button>
-      <div class="col-picker-dropdown" id="_tcp2">${scOpts}</div>
-    </div>
-  </div>`;
+    <div style="position:relative;width:100%;height:300px;">
+      <canvas id="_termStackChart"></canvas>
+    </div>`;
 
-  // Table
-  const thead=`<tr>
-    <th class="row-hdr" style="min-width:110px;position:sticky;left:0;z-index:3;background:var(--bg4);">${isEN?'Terminus':'Terminus'}</th>
-    ${scData.map((d,i)=>`<th style="color:${SC_COLORS[all.indexOf(d)%SC_COLORS.length]};min-width:195px;padding:.4rem;">${d.sc.label}</th>`).join('')}
-  </tr>`;
+  // ── Chart.js ──
+  // Détruire l'instance précédente si elle existe
+  if(window._termStackChartInst){
+    window._termStackChartInst.destroy();
+    window._termStackChartInst = null;
+  }
 
-  const tbody=termNames.map(tNom=>
-    `<tr>
-      <td style="font-size:.6rem;font-weight:800;font-family:var(--fontb);color:var(--text);white-space:nowrap;padding:.4rem .5rem;position:sticky;left:0;z-index:1;background:var(--bg2);">${tNom}</td>
-      ${scData.map(d=>{
-        const ret=(d.termA===tNom)?d.retA:(d.termR===tNom)?d.retR:null;
-        return `<td style="padding:.4rem .5rem;">
-          <div style="display:inline-block;">
-            ${ret?`<div style="width:220px;font-size:.85rem;font-weight:800;font-family:var(--fontb);color:var(--text);text-align:center;background:var(--bg4);border-radius:4px 4px 0 0;padding:.2rem .3rem;box-sizing:border-box;">${fmtMin(ret.totalSec/60)}</div>`:''}
-            ${_buildTreemap(ret)}
-          </div>
-        </td>`;
-      }).join('')}
-    </tr>`
-  ).join('');
+  // Chart.js doit être disponible (chargé via CDN dans index.html)
+  if(typeof Chart === 'undefined'){
+    el.innerHTML += '<div style="color:var(--text3);font-size:.6rem;padding:.5rem;">Chart.js non chargé</div>';
+    return;
+  }
 
-  el.innerHTML=`${filters}
-    <div class="comp-term-scroll">
-      <table class="term-cmp-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.6rem;padding-top:.4rem;border-top:1px solid var(--border);">${legend}</div>`;
+  const isLight = document.body.classList.contains('light-mode');
+  const tickCol  = isLight ? 'rgba(60,70,90,.7)' : 'rgba(180,190,220,.65)';
+  const gridCol  = isLight ? 'rgba(60,70,90,.08)' : 'rgba(160,160,200,.1)';
+
+  window._termStackChartInst = new Chart(
+    document.getElementById('_termStackChart'), {
+      type: 'bar',
+      data: { labels: xLabels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 220 },
+        categoryPercentage: 0.65, // largeur du groupe terminus
+        barPercentage: 1.0,        // barres collées dans le groupe
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index', intersect: false,
+            backgroundColor: '#1f2435',
+            borderColor: '#323854', borderWidth: 1,
+            titleColor: '#a0a8c0', bodyColor: '#e8eaf0',
+            titleFont: { family: 'Barlow Condensed', size: 10 },
+            bodyFont:  { family: 'Barlow Condensed', size: 11 },
+            filter: item => item.parsed.y > 0,
+            callbacks: {
+              title: ctx => {
+                const lbl = ctx[0]?.label;
+                return Array.isArray(lbl) ? lbl.join(' — ') : lbl || '';
+              },
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} min`,
+              footer: ctx => {
+                const total = ctx.reduce((a,c) => a + (c.parsed.y||0), 0);
+                return total > 0 ? `Σ ${Math.round(total*10)/10} min` : '';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: {
+              font: { size: 9, family: 'Barlow Condensed' },
+              color: tickCol,
+              maxRotation: 0,
+              autoSkip: false,
+              callback(v){
+                const l = this.getLabelForValue(v);
+                return Array.isArray(l) ? l : (l || '');
+              }
+            },
+            grid: { color: gridCol },
+          },
+          y: {
+            stacked: true,
+            title: {
+              display: true,
+              text: isEN ? 'Time (min)' : 'Temps (min)',
+              font: { size: 9, family: 'Barlow Condensed' },
+              color: isLight ? 'rgba(60,70,90,.5)' : 'rgba(180,190,220,.5)',
+            },
+            ticks: { font: { size: 9 }, color: tickCol },
+            grid: { color: gridCol },
+          }
+        }
+      }
+    }
+  );
 }
 
-window._toggleTermPicker=function(e,id){
+/* ── Callbacks dropdowns ── */
+window._toggleTermPicker = function(e, id){
   e.stopPropagation();
-  document.querySelectorAll('.col-picker-dropdown').forEach(d=>{if(d.id!==id)d.classList.remove('open');});
-  const dd=document.getElementById(id);
-  if(!dd)return;
+  document.querySelectorAll('.col-picker-dropdown').forEach(d => {
+    if(d.id !== id) d.classList.remove('open');
+  });
+  const dd = document.getElementById(id);
+  if(!dd) return;
   dd.classList.toggle('open');
   if(dd.classList.contains('open')){
-    const r=e.currentTarget.getBoundingClientRect();
-    dd.style.top=(r.bottom+4)+'px';
-    dd.style.left=r.left+'px';
+    const r = e.currentTarget.getBoundingClientRect();
+    dd.style.top  = (r.bottom + 4) + 'px';
+    dd.style.left = r.left + 'px';
   }
 };
-window._termCmpTermCh=function(evt,nom){
+
+window._termCmpTermCh = function(evt, nom){
   if(!_termCmpTermFilter){
-    // Init with ALL terminus names (all checked) before applying this change
-    const all=window._lastCompAll||[];
-    const data=_getScTermData(all);
-    const names=[];const seen=new Set();
-    data.forEach(d=>[d.termA,d.termR].forEach(n=>{if(!seen.has(n)){seen.add(n);names.push(n);}}));
-    _termCmpTermFilter=new Set(names);
+    const data = _getScTermData(window._lastCompAll || []);
+    const names = []; const seen = new Set();
+    data.forEach(d => [d.termA, d.termR].forEach(n => {
+      if(!seen.has(n)){ seen.add(n); names.push(n); }
+    }));
+    _termCmpTermFilter = new Set(names);
   }
-  if(evt.target.checked)_termCmpTermFilter.add(nom);else _termCmpTermFilter.delete(nom);
-  if(!_termCmpTermFilter.size)_termCmpTermFilter=null;
-  renderCompTerminus(window._lastCompAll||[]);
+  evt.target.checked
+    ? _termCmpTermFilter.add(nom)
+    : _termCmpTermFilter.delete(nom);
+  if(!_termCmpTermFilter.size) _termCmpTermFilter = null;
+  renderCompTerminus(window._lastCompAll || []);
 };
-window._termCmpScCh=function(evt,scIdx){
+
+window._termCmpScCh = function(evt, scIdx){
   if(!_termCmpScFilter){
-    const all=window._lastCompAll||[];
-    _termCmpScFilter=new Set(all.map(d=>d.scIdx));
+    const all = window._lastCompAll || [];
+    _termCmpScFilter = new Set(
+      all.filter(d => (d.sc.type||'NOMINAL').toUpperCase() === 'NOMINAL').map(d => d.scIdx)
+    );
   }
-  if(evt.target.checked)_termCmpScFilter.add(scIdx);else _termCmpScFilter.delete(scIdx);
-  if(!_termCmpScFilter.size)_termCmpScFilter=null;
-  renderCompTerminus(window._lastCompAll||[]);
+  evt.target.checked
+    ? _termCmpScFilter.add(scIdx)
+    : _termCmpScFilter.delete(scIdx);
+  if(!_termCmpScFilter.size) _termCmpScFilter = null;
+  renderCompTerminus(window._lastCompAll || []);
 };
 
 function fsOpenCompTerminus(){
-  const el=document.getElementById('compTermContent');
-  if(!el)return;
-  openFullscreen(document.getElementById('compTermTitle').textContent,body=>{
-    Object.assign(body.style,{overflow:'auto',alignItems:'flex-start',padding:'1.5rem'});
-    const clone=el.cloneNode(true);
-    clone.style.cssText = 'width:calc(100vw - 3rem);overflow:visible;';
-    body.appendChild(clone);
+  if(!LINE) return;
+  openFullscreen(document.getElementById('compTermTitle').textContent, body => {
+    Object.assign(body.style, {overflow:'auto', alignItems:'flex-start', padding:'1.5rem'});
+    // Re-rendre le graphique dans un conteneur plein écran
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'width:calc(100vw - 3rem);';
+    const canvasWrap = document.createElement('div');
+    canvasWrap.style.cssText = `position:relative;width:100%;height:${window.innerHeight - 160}px;`;
+    const cv = document.createElement('canvas');
+    cv.id = '_termStackChartFs';
+    canvasWrap.appendChild(cv);
+    wrap.appendChild(canvasWrap);
+    body.appendChild(wrap);
+    requestAnimationFrame(() => {
+      const inst = window._termStackChartInst;
+      if(!inst) return;
+      new Chart(cv, {
+        type: inst.config.type,
+        data: JSON.parse(JSON.stringify(inst.data)),
+        options: {...inst.options, animation:{duration:0}}
+      });
+    });
   });
 }
+
 
 
 /* ── Variable d'état : affichage ligne Programme MOE ── */

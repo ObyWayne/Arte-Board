@@ -190,6 +190,8 @@ body.light-mode{--bg:#e8eaed;--bg2:#dfe1e6;--bg3:#d4d7dd;--bg4:#c8ccd4;--border:
 .comp-bubble-card{display:flex;flex-direction:column;}
 .comp-sp-card .sp-matrix-wrap{overflow-x:auto;overflow-y:auto;max-width:100%;}
 .comp-terminus-card .comp-term-scroll{overflow-x:auto;max-width:100%;}
+/* Histogramme terminus : hauteur suffisante pour le canvas */
+.comp-terminus-card #compTermContent { min-height: 360px; }
 /* Sticky 1ère colonne : tableau synthèse */
 .comp-synth-table th:first-child{text-align:left;position:sticky;left:0;z-index:3;background:var(--bg4);}
 .comp-synth-table td:first-child{text-align:left;font-weight:700;color:var(--text);position:sticky;left:0;z-index:1;background:var(--bg2);}

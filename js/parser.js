@@ -1192,6 +1192,15 @@ function parseRetournement(wb){
       const col5 = r[5]!=null?parseInt(r[5]):null;
       const col6 = r[6]!=null?String(r[6]).trim():'';
       retournement[key].params.push({label:col1, sec:col2, occ:col3, voie:col4, ordre:col5, categorie:col6});
+      // col H (index 7) : VRAI = compressible (hachuré), FAUX = incompressible (plein)
+      const col7 = r[7] != null
+      ? (String(r[7]).trim().toUpperCase() === 'VRAI' || r[7] === true)
+      : false;
+      retournement[key].params.push({
+
+    label:col1, sec:col2, occ:col3, voie:col4,
+    ordre:col5, categorie:col6, compressible:col7
+  });
       retournement[key].totalSec+=col2;
     } else if(!isNaN(parseInt(r[1]))){
       const val=parseInt(r[1])||0;
