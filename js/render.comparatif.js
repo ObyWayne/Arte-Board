@@ -883,142 +883,189 @@ function _getScTermData(all){
 }
 
 /* Rendu principal */
+function _termCatCol(catName, orderedCats){
+  const i = orderedCats.indexOf(catName);
+  return _TERM_CAT_COLS[i >= 0 ? i % _TERM_CAT_COLS.length : 0];
+}
+
+/* Variante de couleur : plus sombre pour les sous-catégories successives */
+function _shadeHex(hex, pct){
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.max(0,Math.min(255,((n>>16)&0xff)+pct));
+  const g=Math.max(0,Math.min(255,((n>>8)&0xff)+pct));
+  const b=Math.max(0,Math.min(255,(n&0xff)+pct));
+  return '#'+((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+}
+
+/* Canvas pattern hachuré (compressible) */
+function _termHatchPat(col){
+  const c=document.createElement('canvas'); c.width=7; c.height=7;
+  const cx=c.getContext('2d');
+  cx.fillStyle=col+'18'; cx.fillRect(0,0,7,7);
+  cx.strokeStyle=col; cx.lineWidth=1.2;
+  cx.beginPath(); cx.moveTo(0,7); cx.lineTo(7,0); cx.stroke();
+  cx.beginPath(); cx.moveTo(-1,1); cx.lineTo(1,-1); cx.stroke();
+  cx.beginPath(); cx.moveTo(6,8); cx.lineTo(8,6); cx.stroke();
+  const tmp=document.createElement('canvas').getContext('2d');
+  return tmp.createPattern(c,'repeat')||col+'55';
+}
+
+/* Collecte données terminus pour chaque scénario */
+function _getScTermData(all){
+  const saved={stations:LINE.stations,inter:LINE.inter,retournement:LINE.retournement,
+    tendu:LINE.tendu,tenduR:LINE.tenduR,detenteA:LINE.detenteA,detenteR:LINE.detenteR};
+  const result=all.map(k=>{
+    if(LINE.scenariosData&&LINE.scenariosData[k.scIdx]){
+      const d=LINE.scenariosData[k.scIdx];
+      LINE.stations=d.stations;LINE.inter=d.inter;LINE.retournement=d.retournement;
+      LINE.tendu=d.tendu;LINE.tenduR=d.tenduR;LINE.detenteA=d.detenteA;LINE.detenteR=d.detenteR;
+    }
+    const tsc=getTerminusForSc(k.scIdx);
+    return {sc:k.sc,scIdx:k.scIdx,termA:tsc.termA,retA:tsc.retA,termR:tsc.termR,retR:tsc.retR};
+  });
+  Object.assign(LINE,saved);
+  return result;
+}
+
 function renderCompTerminus(all){
-  const el = document.getElementById('compTermContent');
-  if(!el) return;
-  if(!all || !all.length || !LINE){
-    el.innerHTML = '<div style="color:var(--text3);font-size:.6rem;padding:.5rem;">—</div>';
+  const el=document.getElementById('compTermContent');
+  if(!el)return;
+  if(!all||!all.length||!LINE){
+    el.innerHTML='<div style="color:var(--text3);font-size:.6rem;padding:.5rem;">—</div>';
     return;
   }
 
-  const scTermData = _getScTermData(all);
+  window._lastCompAll=all;
+  const scTermData=_getScTermData(all);
 
-  // Tous les noms de terminus uniques
-  const allTermNames = [];
-  const seenT = new Set();
-  scTermData.forEach(d => [d.termA, d.termR].forEach(n => {
-    if(!seenT.has(n)){ seenT.add(n); allTermNames.push(n); }
+  /* ── Noms terminus uniques ── */
+  const allTermNames=[];
+  const seenT=new Set();
+  scTermData.forEach(d=>[d.termA,d.termR].forEach(n=>{
+    if(n&&!seenT.has(n)){seenT.add(n);allTermNames.push(n);}
   }));
 
-  // Filtres actifs
-  const termNames = _termCmpTermFilter
-    ? allTermNames.filter(n => _termCmpTermFilter.has(n))
-    : allTermNames;
-
-  // Par défaut : scénarios nominaux uniquement (pas SP*)
-  if(!_termCmpScFilter){
-    _termCmpScFilter = new Set(
-      all
-        .filter(d => (d.sc.type||'NOMINAL').toUpperCase() === 'NOMINAL')
-        .map(d => d.scIdx)
+  /* ── Filtre scénarios : nominaux cochés par défaut, SP décochés ── */
+  if(_termCmpScFilter===null){
+    _termCmpScFilter=new Set(
+      scTermData.filter(d=>(d.sc.type||'NOMINAL').toUpperCase()==='NOMINAL').map(d=>d.scIdx)
     );
   }
-  const scData = _termCmpScFilter
-  ? scTermData.filter(d => _termCmpScFilter.has(d.scIdx))
-  : scTermData;
 
-  // Collecte toutes les catégories dans l'ordre d'apparition
-  const allCats = [];
-  scTermData.forEach(d => [d.retA, d.retR].forEach(ret => {
-    if(!ret || !ret.params) return;
-    ret.params.forEach(p => {
-      const cat = (p.categorie || p.occ || p.label || 'Autre').trim() || 'Autre';
-      if(!allCats.includes(cat)) allCats.push(cat);
+  const termNames=_termCmpTermFilter
+    ?allTermNames.filter(n=>_termCmpTermFilter.has(n))
+    :allTermNames;
+  const scData=scTermData.filter(d=>_termCmpScFilter.has(d.scIdx));
+
+  /* ── Collecte sous-catégories uniques (cat × label × compressible) ──
+     Un dataset par (cat, sublabel, compressible) → pas de doublon possible */
+  const segKeys=[];          // [{cat, label, compressible}]
+  const seenSeg=new Set();
+  scTermData.forEach(d=>[d.retA,d.retR].forEach(ret=>{
+    if(!ret||!ret.params)return;
+    ret.params.forEach(p=>{
+      const cat=(p.categorie||p.occ||p.label||'Autre').trim()||'Autre';
+      const lbl=(p.label||'').trim()||cat;
+      const comp=p.compressible===true;
+      const key=`${cat}|||${lbl}|||${comp}`;
+      if(!seenSeg.has(key)){seenSeg.add(key);segKeys.push({cat,label:lbl,compressible:comp});}
     });
   }));
-  // Fallback si aucune catégorie
-  if(!allCats.length) allCats.push('Temps');
 
-  // ── Labels axe X : une entrée (terminus + scénario) par barre,
-  //    séparateur vide entre groupes de terminus ──
-  const xLabels = [];
-  const barMeta = []; // {termNom, scIdx, ret} ou null pour séparateur
-  termNames.forEach((tNom, ti) => {
-    scData.forEach(d => {
-      const ret = (d.termA === tNom) ? d.retA : (d.termR === tNom) ? d.retR : null;
-      xLabels.push([tNom, d.sc.label]); // tableau = multi-ligne Chart.js
-      barMeta.push({tNom, scIdx:d.scIdx, ret});
-    });
-    // Espace vide entre groupes (sauf après le dernier)
-    if(ti < termNames.length - 1){
-      xLabels.push('');
-      barMeta.push(null);
-    }
+  /* Ordre stable des catégories */
+  const allCats=[];
+  segKeys.forEach(s=>{if(!allCats.includes(s.cat))allCats.push(s.cat);});
+
+  /* Nuances de couleur : incompressible = couleur pleine, compressible = plus claire */
+  const catSubIdx={}; // {cat: {label: subIndex}}
+  segKeys.forEach(s=>{
+    if(!catSubIdx[s.cat]) catSubIdx[s.cat]={};
+    if(catSubIdx[s.cat][s.label]===undefined)
+      catSubIdx[s.cat][s.label]=Object.keys(catSubIdx[s.cat]).length;
   });
 
-  // ── Datasets : un dataset par (catégorie × compressible) ──
-  const datasets = [];
-  allCats.forEach(cat => {
-    [false, true].forEach(compressible => {
-      const col  = _termCatColor(cat, allCats);
-      let   bg;
-      if(compressible){
-        const pat = _makeHatchPattern(col);
-        bg = pat || (col + '55');
-      } else {
-        bg = col + 'cc';
-      }
-      const data = barMeta.map(m => {
-        if(!m || !m.ret || !m.ret.params) return null;
-        const total = m.ret.params
-          .filter(p => {
-            const pCat = (p.categorie || p.occ || p.label || 'Autre').trim() || 'Autre';
-            return pCat === cat && (p.compressible === true) === compressible;
-          })
-          .reduce((a, p) => a + (p.sec || 0), 0);
-        return total > 0 ? Math.round(total / 60 * 10) / 10 : null;
-      });
-      datasets.push({
-        label: cat + (compressible ? ' (comp.)' : ' (incomp.)'),
-        data,
-        backgroundColor: bg,
-        borderColor: col,
-        borderWidth: 0.8,
-        stack: 's',
-        _cat: cat,
-        _compressible: compressible,
-      });
+  /* ── Labels axe X : (terminus, scénario) par barre + séparateur vide entre terminus ── */
+  const xLabels=[];
+  const barMeta=[];  // {tNom, scIdx, ret} | null
+  termNames.forEach((tNom,ti)=>{
+    scData.forEach(d=>{
+      const ret=(d.termA===tNom)?d.retA:(d.termR===tNom)?d.retR:null;
+      xLabels.push([tNom,d.sc.label]);
+      barMeta.push({tNom,scIdx:d.scIdx,ret});
     });
+    if(ti<termNames.length-1){xLabels.push('');barMeta.push(null);}
   });
 
-  // ── Dropdowns filtres ──
-  const termOpts = allTermNames.map(n => {
-    const chk = (!_termCmpTermFilter || _termCmpTermFilter.has(n)) ? 'checked' : '';
-    return `<label class="col-picker-item">
-      <input type="checkbox" ${chk} onchange="_termCmpTermCh(event,'${n.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"> ${n}
-    </label>`;
-  }).join('');
+  /* ── Datasets ── */
+  const datasets=segKeys.map(sk=>{
+    const baseCol=_termCatCol(sk.cat,allCats);
+    const subIdx=catSubIdx[sk.cat][sk.label]||0;
+    /* Nuances : subIdx 0 = couleur principale, 1 = +20 clair, 2 = +35 clair... */
+    const shade=subIdx*18;
+    const nuanceCol=_shadeHex(baseCol,shade);
 
-  const scOpts = scTermData.map(d => {
-  const chk = _termCmpScFilter.has(d.scIdx) ? 'checked' : '';
-    const isSP = (d.sc.type||'NOMINAL').toUpperCase() !== 'NOMINAL';
-    return `<label class="col-picker-item">
-      <input type="checkbox" ${chk} onchange="_termCmpScCh(event,${d.scIdx})">
-      ${d.sc.label}${isSP ? ' <span style="opacity:.5;font-size:.85em;">SP</span>' : ''}
-    </label>`;
-  }).join('');
+    const bg=sk.compressible?_termHatchPat(nuanceCol):nuanceCol+'cc';
 
-  // ── Légende ──
-  const legCats = allCats.map(cat => {
-    const col = _termCatColor(cat, allCats);
+    const data=barMeta.map(m=>{
+      if(!m||!m.ret||!m.ret.params)return null;
+      const v=m.ret.params
+        .filter(p=>{
+          const pCat=(p.categorie||p.occ||p.label||'Autre').trim()||'Autre';
+          const pLbl=(p.label||'').trim()||pCat;
+          const pComp=p.compressible===true;
+          return pCat===sk.cat && pLbl===sk.label && pComp===sk.compressible;
+        })
+        .reduce((a,p)=>a+(p.sec||0),0);
+      return v>0?Math.round(v/60*10)/10:null;
+    });
+
+    return {
+      label:`${sk.cat} › ${sk.label}${sk.compressible?' (comp.)':''}`,
+      data, backgroundColor:bg,
+      borderColor:nuanceCol, borderWidth:0.6,
+      stack:'s',
+      _cat:sk.cat, _compressible:sk.compressible,
+    };
+  });
+
+  /* ── Légende ── */
+  const legCats=allCats.map(cat=>{
+    const col=_termCatCol(cat,allCats);
     return `<span style="display:flex;align-items:center;gap:4px;font-size:.6rem;color:var(--text2);">
-      <span style="width:10px;height:10px;border-radius:2px;background:${col}cc;border:1px solid ${col};flex-shrink:0;"></span>
-      ${cat}
+      <span style="width:10px;height:10px;border-radius:2px;background:${col}cc;border:1px solid ${col};flex-shrink:0;"></span>${cat}
     </span>`;
   }).join('');
-  const legHatch = `
+  const legHatch=`
     <span style="display:flex;align-items:center;gap:4px;font-size:.6rem;color:var(--text3);">
-      <span style="width:10px;height:10px;border-radius:2px;background:rgba(120,120,120,.12);border:1px dashed #888;
+      <span style="width:10px;height:10px;border-radius:2px;flex-shrink:0;
+        background:rgba(120,120,120,.1);border:1px dashed #888;
         background-image:repeating-linear-gradient(45deg,#888 0,#888 1px,transparent 0,transparent 50%);
-        background-size:5px 5px;flex-shrink:0;"></span>Compressible
+        background-size:5px 5px;"></span>Compressible
     </span>
     <span style="display:flex;align-items:center;gap:4px;font-size:.6rem;color:var(--text3);">
       <span style="width:10px;height:10px;border-radius:2px;background:#888cc;border:1px solid #888;flex-shrink:0;"></span>Incompressible
     </span>`;
 
-  // ── HTML conteneur ──
-  el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.6rem;">
+  /* ── Dropdowns ── */
+  const termOpts=allTermNames.map(n=>{
+    const chk=(!_termCmpTermFilter||_termCmpTermFilter.has(n))?'checked':'';
+    return `<label class="col-picker-item"><input type="checkbox" ${chk}
+      onchange="_termCmpTermCh(event,'${n.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"> ${n}</label>`;
+  }).join('');
+
+  /* Tous les scénarios dans le dropdown, nominaux cochés par défaut, SP décochés */
+  const scOpts=scTermData.map(d=>{
+    const chk=_termCmpScFilter.has(d.scIdx)?'checked':'';
+    const isSP=(d.sc.type||'NOMINAL').toUpperCase()!=='NOMINAL';
+    return `<label class="col-picker-item"><input type="checkbox" ${chk}
+      onchange="_termCmpScCh(event,${d.scIdx})">
+      ${d.sc.label}${isSP?'<span style="opacity:.5;font-size:.85em;margin-left:3px;">SP</span>':''}
+    </label>`;
+  }).join('');
+
+  /* ── HTML ── */
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem;">
       <div class="col-picker-wrap">
         <button class="col-picker-btn" onclick="_toggleTermPicker(event,'_tcp1')">🚉 Terminus ▾</button>
         <div class="col-picker-dropdown" id="_tcp1">${termOpts}</div>
@@ -1027,9 +1074,9 @@ function renderCompTerminus(all){
         <button class="col-picker-btn" onclick="_toggleTermPicker(event,'_tcp2')">📋 Scénarios ▾</button>
         <div class="col-picker-dropdown" id="_tcp2">${scOpts}</div>
       </div>
-      <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-left:auto;">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-left:auto;">
         ${legCats}
-        <span style="width:1px;height:14px;background:var(--border);display:inline-block;margin:0 2px;"></span>
+        <span style="width:1px;height:12px;background:var(--border);margin:0 2px;"></span>
         ${legHatch}
       </div>
     </div>
@@ -1037,135 +1084,140 @@ function renderCompTerminus(all){
       <canvas id="_termStackChart"></canvas>
     </div>`;
 
-  // ── Chart.js ──
-  // Détruire l'instance précédente si elle existe
-  if(window._termStackChartInst){
-    window._termStackChartInst.destroy();
-    window._termStackChartInst = null;
-  }
-
-  // Chart.js doit être disponible (chargé via CDN dans index.html)
-  if(typeof Chart === 'undefined'){
-    el.innerHTML += '<div style="color:var(--text3);font-size:.6rem;padding:.5rem;">Chart.js non chargé</div>';
+  /* ── Détruire instance précédente ── */
+  if(window._termStackInst){window._termStackInst.destroy();window._termStackInst=null;}
+  if(typeof Chart==='undefined'){
+    el.innerHTML+='<div style="color:var(--text3);font-size:.6rem;padding:.5rem;">Chart.js non chargé</div>';
     return;
   }
 
-  const isLight = document.body.classList.contains('light-mode');
-  const tickCol  = isLight ? 'rgba(60,70,90,.7)' : 'rgba(180,190,220,.65)';
-  const gridCol  = isLight ? 'rgba(60,70,90,.08)' : 'rgba(160,160,200,.1)';
+  const isLight=document.body.classList.contains('light-mode');
+  const tickCol=isLight?'rgba(60,70,90,.7)':'rgba(180,190,220,.65)';
+  const gridCol=isLight?'rgba(60,70,90,.07)':'rgba(160,160,200,.1)';
 
-  window._termStackChartInst = new Chart(
-    document.getElementById('_termStackChart'), {
-      type: 'bar',
-      data: { labels: xLabels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 220 },
-        categoryPercentage: 0.65, // largeur du groupe terminus
-        barPercentage: 1.0,        // barres collées dans le groupe
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            mode: 'index', intersect: false,
-            backgroundColor: '#1f2435',
-            borderColor: '#323854', borderWidth: 1,
-            titleColor: '#a0a8c0', bodyColor: '#e8eaf0',
-            titleFont: { family: 'Barlow Condensed', size: 10 },
-            bodyFont:  { family: 'Barlow Condensed', size: 11 },
-            filter: item => item.parsed.y > 0,
-            callbacks: {
-              title: ctx => {
-                const lbl = ctx[0]?.label;
-                return Array.isArray(lbl) ? lbl.join(' — ') : lbl || '';
-              },
-              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} min`,
-              footer: ctx => {
-                const total = ctx.reduce((a,c) => a + (c.parsed.y||0), 0);
-                return total > 0 ? `Σ ${Math.round(total*10)/10} min` : '';
-              }
+  /* Stocker config pour fullscreen */
+  window._termStackConfig={
+    type:'bar',
+    data:{labels:xLabels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:220},
+      categoryPercentage:0.65,
+      barPercentage:1.0,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          mode:'index',intersect:false,
+          backgroundColor:'#1f2435',borderColor:'#323854',borderWidth:1,
+          titleColor:'#a0a8c0',bodyColor:'#e8eaf0',
+          titleFont:{family:'Barlow Condensed',size:10},
+          bodyFont:{family:'Barlow Condensed',size:11},
+          filter:item=>item.parsed.y>0,
+          callbacks:{
+            title:ctx=>{
+              const l=ctx[0]?.label;
+              return Array.isArray(l)?l.join(' — '):(l||'');
+            },
+            label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y} min`,
+            footer:ctx=>{
+              const t=ctx.reduce((a,c)=>a+(c.parsed.y||0),0);
+              return t>0?`Σ ${Math.round(t*10)/10} min`:'';
             }
           }
-        },
-        scales: {
-          x: {
-            stacked: true,
-            ticks: {
-              font: { size: 9, family: 'Barlow Condensed' },
-              color: tickCol,
-              maxRotation: 0,
-              autoSkip: false,
-              callback(v){
-                const l = this.getLabelForValue(v);
-                return Array.isArray(l) ? l : (l || '');
-              }
-            },
-            grid: { color: gridCol },
+        }
+      },
+      scales:{
+        x:{
+          stacked:true,
+          ticks:{
+            font:{size:9,family:'Barlow Condensed'},color:tickCol,
+            maxRotation:0,autoSkip:false,
+            callback(v){const l=this.getLabelForValue(v);return Array.isArray(l)?l:(l||'');}
           },
-          y: {
-            stacked: true,
-            title: {
-              display: true,
-              text: isEN ? 'Time (min)' : 'Temps (min)',
-              font: { size: 9, family: 'Barlow Condensed' },
-              color: isLight ? 'rgba(60,70,90,.5)' : 'rgba(180,190,220,.5)',
-            },
-            ticks: { font: { size: 9 }, color: tickCol },
-            grid: { color: gridCol },
-          }
+          grid:{color:gridCol},
+        },
+        y:{
+          stacked:true,
+          title:{display:true,text:isEN?'Time (min)':'Temps (min)',
+            font:{size:9,family:'Barlow Condensed'},
+            color:isLight?'rgba(60,70,90,.5)':'rgba(180,190,220,.5)'},
+          ticks:{font:{size:9},color:tickCol},
+          grid:{color:gridCol},
         }
       }
     }
-  );
+  };
+
+  window._termStackInst=new Chart(document.getElementById('_termStackChart'),window._termStackConfig);
 }
 
-/* ── Callbacks dropdowns ── */
-window._toggleTermPicker = function(e, id){
+/* ── Callbacks filtres ── */
+window._toggleTermPicker=function(e,id){
   e.stopPropagation();
-  document.querySelectorAll('.col-picker-dropdown').forEach(d => {
-    if(d.id !== id) d.classList.remove('open');
-  });
-  const dd = document.getElementById(id);
-  if(!dd) return;
+  document.querySelectorAll('.col-picker-dropdown').forEach(d=>{if(d.id!==id)d.classList.remove('open');});
+  const dd=document.getElementById(id);if(!dd)return;
   dd.classList.toggle('open');
   if(dd.classList.contains('open')){
-    const r = e.currentTarget.getBoundingClientRect();
-    dd.style.top  = (r.bottom + 4) + 'px';
-    dd.style.left = r.left + 'px';
+    const r=e.currentTarget.getBoundingClientRect();
+    dd.style.top=(r.bottom+4)+'px';dd.style.left=r.left+'px';
   }
 };
 
-window._termCmpTermCh = function(evt, nom){
+window._termCmpTermCh=function(evt,nom){
   if(!_termCmpTermFilter){
-    const data = _getScTermData(window._lastCompAll || []);
-    const names = []; const seen = new Set();
-    data.forEach(d => [d.termA, d.termR].forEach(n => {
-      if(!seen.has(n)){ seen.add(n); names.push(n); }
-    }));
-    _termCmpTermFilter = new Set(names);
+    const data=_getScTermData(window._lastCompAll||[]);
+    const names=[];const seen=new Set();
+    data.forEach(d=>[d.termA,d.termR].forEach(n=>{if(n&&!seen.has(n)){seen.add(n);names.push(n);}}));
+    _termCmpTermFilter=new Set(names);
   }
-  evt.target.checked
-    ? _termCmpTermFilter.add(nom)
-    : _termCmpTermFilter.delete(nom);
-  if(!_termCmpTermFilter.size) _termCmpTermFilter = null;
-  renderCompTerminus(window._lastCompAll || []);
+  evt.target.checked?_termCmpTermFilter.add(nom):_termCmpTermFilter.delete(nom);
+  if(!_termCmpTermFilter.size)_termCmpTermFilter=null;
+  renderCompTerminus(window._lastCompAll||[]);
 };
 
-window._termCmpScCh = function(evt, scIdx){
+window._termCmpScCh=function(evt,scIdx){
   if(!_termCmpScFilter){
-    const all = window._lastCompAll || [];
-    _termCmpScFilter = new Set(
-  scTermData
-    .filter(d => (d.sc.type||'NOMINAL').toUpperCase() === 'NOMINAL')
-    .map(d => d.scIdx)
-);
+    /* Init : nominaux seulement */
+    const all=window._lastCompAll||[];
+    const data=_getScTermData(all);
+    _termCmpScFilter=new Set(
+      data.filter(d=>(d.sc.type||'NOMINAL').toUpperCase()==='NOMINAL').map(d=>d.scIdx)
+    );
   }
-  evt.target.checked
-    ? _termCmpScFilter.add(scIdx)
-    : _termCmpScFilter.delete(scIdx);
-  if(!_termCmpScFilter.size) _termCmpScFilter = null;
-  renderCompTerminus(window._lastCompAll || []);
+  evt.target.checked?_termCmpScFilter.add(scIdx):_termCmpScFilter.delete(scIdx);
+  if(!_termCmpScFilter.size)_termCmpScFilter=null;
+  renderCompTerminus(window._lastCompAll||[]);
 };
+
+/* ── Plein écran : re-render dans un canvas dédié ── */
+function fsOpenCompTerminus(){
+  if(!LINE||!window._termStackConfig)return;
+  openFullscreen(document.getElementById('compTermTitle').textContent,body=>{
+    Object.assign(body.style,{overflow:'auto',alignItems:'flex-start',padding:'1.5rem'});
+    const wrap=document.createElement('div');
+    wrap.style.cssText=`width:calc(100vw - 3rem);position:relative;height:${window.innerHeight-130}px;`;
+    const cv=document.createElement('canvas');
+    cv.id='_termStackFs';
+    wrap.appendChild(cv);
+    body.appendChild(wrap);
+    requestAnimationFrame(()=>{
+      /* Cloner la config sans les patterns (CanvasPattern non sérialisable) */
+      const cfg=window._termStackConfig;
+      const datasetsClone=cfg.data.datasets.map(ds=>({
+        ...ds,
+        /* Remplacer les patterns par une couleur de fallback */
+        backgroundColor:ds._compressible
+          ?(_termCatCol(ds._cat,cfg.data.datasets.map(d=>d._cat).filter((c,i,a)=>a.indexOf(c)===i))+'88')
+          :ds.backgroundColor,
+      }));
+      new Chart(cv,{
+        type:cfg.type,
+        data:{labels:cfg.data.labels,datasets:datasetsClone},
+        options:{...cfg.options,animation:{duration:0},responsive:true,maintainAspectRatio:false}
+      });
+    });
+  });
+}
 
 function fsOpenCompTerminus(){
   if(!LINE) return;
