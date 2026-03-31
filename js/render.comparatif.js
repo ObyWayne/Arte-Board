@@ -608,22 +608,29 @@ let yMin2 = Math.min(0, Math.floor(Math.min(...allY2) * 1.1 / 50) * 50);
     ctx.fillText(Math.round(v), W - 2, y + 3);
   }
 
-  // ── Légende ──
-  const legY = H - 9;
-  ctx.font = '700 8.5px "Barlow Condensed",sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(200,210,230,.8)';
-  ctx.fillText(isEN ? 'Boardings ↑' : 'Montées ↑', PAD.l, legY);
+  // Légende ↑↓
+const legY = H - 9;
+ctx.font = '700 8.5px "Barlow Condensed",sans-serif';
+ctx.textAlign = 'left';
 
-  ctx.fillStyle = COL_R + 'cc';
-  ctx.fillRect(PAD.l + 75, legY - 7, 10, 7);
-  ctx.fillStyle = 'rgba(180,190,220,.85)';
-  ctx.fillText(isEN ? 'Alightings ↓' : 'Descentes ↓', PAD.l + 88, legY);
+// Carré montées (primaire1)
+ctx.fillStyle = COL_MONTEES + 'dd';
+ctx.fillRect(PAD.l, legY-7, 10, 7);
+ctx.fillStyle = 'rgba(180,190,220,.85)';
+ctx.fillText(isEN ? 'Boardings ↑' : 'Montées ↑', PAD.l + 13, legY);
 
-  ctx.fillStyle = COL_CHARGE + 'cc';
-  ctx.fillRect(PAD.l + 170, legY - 7, 10, 7);
-  ctx.fillStyle = 'rgba(180,190,220,.85)';
-  ctx.fillText('Charge', PAD.l + 183, legY);
+// Carré descentes (primaire2)
+ctx.fillStyle = COL_DESCENTES + 'dd';
+ctx.fillRect(PAD.l + 80, legY-7, 10, 7);
+ctx.fillStyle = 'rgba(180,190,220,.85)';
+ctx.fillText(isEN ? 'Alightings ↓' : 'Descentes ↓', PAD.l + 93, legY);
+
+// Trait courbe charge
+ctx.strokeStyle = COL_CHARGE;
+ctx.lineWidth = 2;
+ctx.beginPath(); ctx.moveTo(PAD.l + 170, legY-3); ctx.lineTo(PAD.l + 182, legY-3); ctx.stroke();
+ctx.fillStyle = 'rgba(180,190,220,.85)';
+ctx.fillText('Charge', PAD.l + 185, legY);
 
   // Légende dw
   DW_COLORS.forEach((col, di) => {
@@ -699,40 +706,52 @@ function _renderBubbleYAxis(PAD, H, PH, yMax, py, dpr){
   const axisCanvas = document.getElementById('chargeAxisCanvas');
   if(!axisCanvas) return;
   const AW = PAD.l + 2;
+
+  // Dimensions physiques
   axisCanvas.width  = Math.round(AW * dpr);
   axisCanvas.height = Math.round(H  * dpr);
   axisCanvas.style.width  = AW + 'px';
   axisCanvas.style.height = H  + 'px';
+
   const axCtx = axisCanvas.getContext('2d');
+  // scale EN PREMIER, avant tout dessin
+  axCtx.scale(dpr, dpr);
+
+  // Fond (couleur bg2 adaptative dark/light)
+  const bgCol = getComputedStyle(document.documentElement).getPropertyValue('--bg2').trim() || '#1f2435';
+  axCtx.fillStyle = bgCol;
+  axCtx.fillRect(0, 0, AW, H);
+
+  // Couleur texte adaptative
+  const isLight = document.body.classList.contains('light-mode');
+  const textCol = isLight ? 'rgba(60,70,90,.7)' : 'rgba(180,190,220,.55)';
+
+  // Labels valeurs Y
+  axCtx.fillStyle = textCol;
+  axCtx.font = '600 11px "Barlow Condensed",sans-serif';
+  axCtx.textAlign = 'right';
+  for(let t = 0; t <= 5; t++){
+    const v = yMax / 5 * t;
+    axCtx.fillText(Math.round(v), PAD.l - 4, py(v) + 3);
+  }
+
+  // Trait de bordure droite
+  axCtx.strokeStyle = 'rgba(160,160,200,.2)';
+  axCtx.lineWidth = 1;
+  axCtx.beginPath();
+  axCtx.moveTo(AW - 1, PAD.t);
+  axCtx.lineTo(AW - 1, PAD.t + PH);
+  axCtx.stroke();
+
+  // Label axe Y rotaté
   axCtx.save();
   axCtx.translate(11, PAD.t + PH / 2);
   axCtx.rotate(-Math.PI / 2);
-  // Couleur texte adaptative dark/light
-  const isDarkMode = document.body.classList.contains('light-mode') ? false : true;
-  axCtx.fillStyle = isDarkMode ? 'rgba(180,190,220,.55)' : 'rgba(60,70,90,.7)';
+  axCtx.fillStyle = isLight ? 'rgba(60,70,90,.4)' : 'rgba(180,190,220,.35)';
   axCtx.font = '600 9px "Barlow Condensed",sans-serif';
   axCtx.textAlign = 'center';
   axCtx.fillText('Montées / Descentes', 0, 0);
   axCtx.restore();
-  axCtx.scale(dpr, dpr);
-  axCtx.clearRect(0, 0, AW, H);
-  
-  // Lire la vraie couleur de fond en temps réel (dark/light)
-  const bgCol = getComputedStyle(document.documentElement)
-  .getPropertyValue('--bg2').trim() ||
-  getComputedStyle(document.body).getPropertyValue('--bg2').trim() ||
-  '#1f2435';
-  axCtx.fillStyle = bgCol || 'transparent';
-  axCtx.fillRect(0, 0, AW, H);
-  axCtx.fillStyle = bgCol; axCtx.fillRect(0, 0, AW, H);
-  for(let t = 0; t <= 5; t++){
-    const v = yMax / 5 * t, y = py(v);
-    axCtx.fillStyle = 'rgba(180,190,220,.55)';
-    axCtx.font = '600 11px "Barlow Condensed",sans-serif'; axCtx.textAlign = 'right';
-    axCtx.fillText(Math.round(v), PAD.l - 4, y + 3);
-  }
-  axCtx.strokeStyle = 'rgba(160,160,200,.2)'; axCtx.lineWidth = 1;
-  axCtx.beginPath(); axCtx.moveTo(AW-1, PAD.t); axCtx.lineTo(AW-1, PAD.t+PH); axCtx.stroke();
 }
 
 
