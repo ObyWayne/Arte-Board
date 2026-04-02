@@ -43,7 +43,7 @@
       class="fs-btn"
       onclick="
         _chargeView = _chargeView === 'flux' ? 'charge' : 'flux';
-        this.innerHTML  = _chargeView === 'flux' ? '↑↓' : '⬛';
+        this.innerHTML  = _chargeView === 'flux' ? '↑↓' : '↑↓';
         this.title      = _chargeView === 'flux' ? 'Montées / Descentes' : 'Charge';
         if (window._lastBubbleAll)
           renderBubbleChartOnCanvas(document.getElementById('chargeCanvas'), null, null,
@@ -69,7 +69,7 @@
             renderBubbleChartOnCanvas(document.getElementById('chargeCanvas'), null, null,
               window._lastBubbleAll, window._lastBubbleSc ?? 0);
         ">
-      Dwell Time
+        ⏲
     </label>
 
     <button class="fs-btn" onclick="fsOpenBubble()" title="Plein écran">⛶</button>

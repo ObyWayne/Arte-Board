@@ -437,94 +437,6 @@ function dwColor(dw) {
   return '#1a1a2e'; 
 }
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   CONTRÔLES HTML — injectés dans le parent du canvas
-   Appelé une seule fois (idempotent grâce à l'id)
-══════════════════════════════════════════════════════════════════════════════ */
-function _ensureBubbleControls(parentEl) {
-  if (document.getElementById('_bubbleCtrlBar')) return;
-
-  const bar = document.createElement('div');
-  bar.id = '_bubbleCtrlBar';
-  bar.style.cssText = [
-    'display:flex', 'align-items:center', 'gap:6px',
-    'padding:4px 8px 2px',
-    'font-family:"Barlow Condensed",sans-serif',
-    'font-size:10px', 'flex-wrap:wrap',
-  ].join(';');
-
-  /* ── Bouton switch vue ── */
-  const btnView = document.createElement('button');
-  btnView.id = '_bubbleViewBtn';
-  btnView.title = 'Changer de vue';
-  _applyBtnStyle(btnView, false);
-  btnView.innerHTML = _chargeView === 'flux'
-    ? '&#9639; Montées / Descentes'
-    : '&#9638; Charge';
-  btnView.onclick = () => {
-    _chargeView = _chargeView === 'flux' ? 'charge' : 'flux';
-    btnView.innerHTML = _chargeView === 'flux'
-      ? '&#9639; Montées / Descentes'
-      : '&#9638; Charge';
-    if (window._lastBubbleAll)
-      renderBubbleChartOnCanvas(
-        document.getElementById('chargeCanvas'),
-        null, null,
-        window._lastBubbleAll,
-        window._lastBubbleSc ?? 0
-      );
-  };
-
-  /* ── Box toggle DW ── */
-  const boxDw = document.createElement('label');
-  boxDw.id = '_bubbleDwBox';
-  boxDw.style.cssText = [
-  'display:flex', 'align-items:center', 'gap:4px',
-  'cursor:pointer', 'user-select:none',
-  'background:rgba(180,140,255,.1)',
-  'border:1px solid rgba(180,140,255,.35)',
-  'border-radius:4px', 'padding:2px 7px',
-  'font-family:"Barlow Condensed",sans-serif',
-  'font-size:10px', 'font-weight:700',
-  'color:rgba(180,140,255,.9)',
-  'letter-spacing:.04em', 'white-space:nowrap',
-].join(';');
-
-  const chk = document.createElement('input');
-  chk.type    = 'checkbox';
-  chk.checked = _dwVisible;
-  chk.style.accentColor = 'rgba(180,140,255,.85)';
-  chk.onchange = () => {
-    _dwVisible = chk.checked;
-    boxDw.style.background  = _dwVisible
-      ? 'rgba(180,140,255,.1)' : 'transparent';
-    boxDw.style.borderColor = _dwVisible
-      ? 'rgba(180,140,255,.35)' : 'rgba(100,110,140,.3)';
-    if (window._lastBubbleAll)
-      renderBubbleChartOnCanvas(
-        document.getElementById('chargeCanvas'),
-        null, null,
-        window._lastBubbleAll,
-        window._lastBubbleSc ?? 0
-      );
-  };
-
-  // Mini légende gradient dans la box
-  const gradSpan = document.createElement('span');
-  gradSpan.style.cssText = gradSpan.style.background = 'rgba(180,140,255,.85)';
-
-  boxDw.appendChild(chk);
-  boxDw.appendChild(gradSpan);
-  boxDw.appendChild(document.createTextNode(' DW théo. + seuils'));
-
-  bar.appendChild(btnView);
-  bar.appendChild(boxDw);
-
-  // Insérer avant le wrapper scrollable du canvas
-  const scrollWrap = parentEl.querySelector('.charge-scroll-wrap') || parentEl;
-parentEl.prepend(bar);
-}
-
 function _applyBtnStyle(btn, active) {
   btn.style.cssText = [
     'display:flex', 'align-items:center', 'gap:4px',
@@ -547,9 +459,6 @@ function renderBubbleChart(all, scIdx) {
   if (!canvas) return;
   window._lastBubbleAll = all;
   window._lastBubbleSc  = scIdx;
-
-  // Injecter les contrôles dans le parent du canvas
-  if (canvas.parentElement) _ensureBubbleControls(canvas.parentElement);
 
   renderBubbleChartOnCanvas(canvas, null, null, all, scIdx);
 }
@@ -930,9 +839,6 @@ ctx.clearRect(0, 0, W, H);
     ctx.fillText(isEN ? 'DW est.' : 'DW théo.', legOffset + 27, legY);
   }
 
-  /* ══════════════════════════════════════════════
-     TOOLTIP
-  ══════════════════════════════════════════════ */
   canvas.onmousemove = (e) => {
     const rect = canvas.getBoundingClientRect();
     const mx   = (e.clientX - rect.left) * (W / rect.width);
