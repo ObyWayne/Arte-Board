@@ -34,9 +34,47 @@
   <!-- ── Ligne 2 col 1 : Montées / Descentes (2/4) ── -->
   <div class="chart-card comp-bubble-card" style="display:flex;flex-direction:column;">
   <div class="chart-card-header">
-    <div class="chart-card-title" id="compBubbleTitle">Montées / Descentes par station</div>
+    <div class="chart-card-title" id="compBubbleTitle">Sepent de Charge</div>
+  
+  <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
+
+    <!-- Bouton switch vue : ↑↓ ou icône charge -->
+    <button id="_bubbleViewBtn" title="Montées / Descentes"
+      class="fs-btn"
+      onclick="
+        _chargeView = _chargeView === 'flux' ? 'charge' : 'flux';
+        this.innerHTML  = _chargeView === 'flux' ? '↑↓' : '⬛';
+        this.title      = _chargeView === 'flux' ? 'Montées / Descentes' : 'Charge';
+        if (window._lastBubbleAll)
+          renderBubbleChartOnCanvas(document.getElementById('chargeCanvas'), null, null,
+            window._lastBubbleAll, window._lastBubbleSc ?? 0);
+      ">↑↓</button>
+
+    <!-- Toggle DW -->
+    <label id="_bubbleDwBox" title="DW théorique + seuils"
+      style="display:flex;align-items:center;gap:3px;
+      cursor:pointer;user-select:none;
+      background:rgba(180,140,255,.1);
+      border:1px solid rgba(180,140,255,.35);
+      border-radius:3px;padding:.15rem .35rem;
+      font-size:.75rem;line-height:1;
+      color:rgba(180,140,255,.9);white-space:nowrap;">
+      <input type="checkbox" checked style="accent-color:rgba(180,140,255,.85);margin:0;width:10px;height:10px;"
+        onchange="
+          _dwVisible = this.checked;
+          this.parentElement.style.background  = _dwVisible ? 'rgba(180,140,255,.1)' : 'transparent';
+          this.parentElement.style.borderColor = _dwVisible ? 'rgba(180,140,255,.35)' : 'rgba(100,110,140,.3)';
+          this.parentElement.style.color       = _dwVisible ? 'rgba(180,140,255,.9)' : 'var(--text3)';
+          if (window._lastBubbleAll)
+            renderBubbleChartOnCanvas(document.getElementById('chargeCanvas'), null, null,
+              window._lastBubbleAll, window._lastBubbleSc ?? 0);
+        ">
+      Dwell Time
+    </label>
+
     <button class="fs-btn" onclick="fsOpenBubble()" title="Plein écran">⛶</button>
   </div>
+</div>
   <!-- Sélecteur scénario : pills style projet, sélection unique -->
   <div style="display:flex;align-items:center;gap:8px;padding:.3rem .5rem .2rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;flex-wrap:wrap;">
   <!-- Sélecteur scénario (pills) -->
