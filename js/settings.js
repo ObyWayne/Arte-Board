@@ -183,7 +183,7 @@ const DICT = {
   synthGlobal:      {fr:'GLOBAL',                     en:'GLOBAL'},
   // Comparatif
   compSPTitle:      {fr:'Couverture des incidents par scénario SP', en:'Incident coverage — SP scenarios'},
-  compBubbleTitle:  {fr:'Montées / Descentes par station',          en:'Boardings / Alightings per stop'},
+  compBubbleTitle:  {fr:'serpent de charge',          en:'load line graph'},
   noNominalSc:      {fr:'Aucun scénario nominal',                   en:'No nominal scenario'},
   noSPLoaded:       {fr:'Aucun scénario SP chargé',                 en:'No SP scenario loaded'},
   tronconUnique:    {fr:'Tronçon unique',                           en:'Single section'},

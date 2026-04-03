@@ -216,8 +216,14 @@ function fsOpenRadar(){
 
 function fsOpenBubble() {
   if (!LINE) return;
-  openFullscreen(document.getElementById('compBubbleTitle').textContent, body => {
-    Object.assign(body.style, { overflow: 'hidden', padding: '0', display: 'flex', flexDirection: 'row' });
+    openFullscreen(document.getElementById('compBubbleTitle').textContent, body => {
+    Object.assign(body.style, { 
+  overflow: 'hidden', 
+  padding: '0',          // ← déjà là
+  display: 'flex', 
+  flexDirection: 'row',
+  alignItems: 'stretch', // ← ajoute ça, pas 'center'
+  });
 
     const availH = window.innerHeight - 62;
 

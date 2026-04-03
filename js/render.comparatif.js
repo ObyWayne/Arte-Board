@@ -463,6 +463,7 @@ function renderBubbleChart(all, scIdx) {
   renderBubbleChartOnCanvas(canvas, null, null, all, scIdx);
 }
 
+
 /* ══════════════════════════════════════════════════════════════════════════════
    MOTEUR PRINCIPAL
 ══════════════════════════════════════════════════════════════════════════════ */
@@ -945,8 +946,8 @@ function _renderBubbleYAxis(PAD, H, PH, yMax, py, dpr, view) {
   const axCtx = axisCanvas.getContext('2d');
   axCtx.scale(dpr, dpr);
 
-  const bgCol = getComputedStyle(document.documentElement)
-    .getPropertyValue('--bg2').trim() || '#1f2435';
+  const bgCol = getComputedStyle(document.body)
+  .getPropertyValue('--bg2').trim() || (isLight ? '#f0f2f7' : '#1f2435');
   axCtx.fillStyle = bgCol;
   axCtx.fillRect(0, 0, AW, H);
 
