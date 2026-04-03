@@ -54,8 +54,6 @@ function computeKPIsAll(){
 
   const results = [];
   LINE.scenarios.forEach((sc, i) => {
-    // Ignorer les scénarios non nominaux (SP) — ils n'ont pas forcément de stations complètes
-      if((sc.type||'NOMINAL').toUpperCase() !== 'NOMINAL') return;
     try {
       // Injecter les données du scénario i
       if(LINE.scenariosData && LINE.scenariosData[i]){
@@ -78,8 +76,6 @@ function computeKPIsAll(){
       const distInterMoy = LINE.inter.length > 0
         ? +(LINE.inter.reduce((a,b)=>a+b.dist,0) / LINE.inter.length).toFixed(0)
         : 0;
-      // Ne conserver que les scénarios nominaux dans le tableau comparatif
-if ((sc.type || 'NOMINAL').toUpperCase() !== 'NOMINAL') return;
 
 results.push({
   ...k, sc, scIdx:i,
@@ -1140,6 +1136,7 @@ function toggleProgrammeMOE(checked) {
 
 function renderCompTable(all) {
   window._lastCompAll = all;
+  
   const tbl = document.getElementById('compTable');
   if (!tbl) return;
   buildColPickerDropdown();
@@ -1148,29 +1145,58 @@ function renderCompTable(all) {
     ...c, label: isEN ? c.labelEN : c.label
   }));
 
-  // Meilleur et pire par colonne (sur nominaux seulement)
   const best = COLS.map(c => {
-    const vs = all.map(k => parseFloat(k[c.key]) || 0);
-    return c.higher ? Math.max(...vs) : Math.min(...vs);
+  const vs = all.filter(k => (k.sc.type||'NOMINAL').toUpperCase() === 'NOMINAL')
+                .map(k => parseFloat(k[c.key]) || 0);
+  return c.higher ? Math.max(...vs) : Math.min(...vs);
   });
   const worst = COLS.map(c => {
-    const vs = all.map(k => parseFloat(k[c.key]) || 0);
-    return c.higher ? Math.min(...vs) : Math.max(...vs);
+  const vs = all.filter(k => (k.sc.type||'NOMINAL').toUpperCase() === 'NOMINAL')
+                .map(k => parseFloat(k[c.key]) || 0);
+  return c.higher ? Math.min(...vs) : Math.max(...vs);
   });
 
   const STK_TH = 'position:sticky;left:0;z-index:3;background:var(--bg4);';
   const STK_TD = 'position:sticky;left:0;z-index:1;background:var(--bg2);font-weight:700;color:var(--text);';
+  const STK_TD_MOE = 'position:sticky;left:0;z-index:1;background:var(--bg3);font-weight:700;color:var(--text);';
 
   let html = `<thead><tr>
     <th style="${STK_TH}">${isEN ? 'Scenario' : 'Scénario'}</th>
     ${COLS.map(c => `<th>${c.label}</th>`).join('')}
   </tr></thead><tbody>`;
 
-  // Lignes scénarios nominaux
-  all.forEach((k, si) => {
+  /* ── Ligne Programme MOE en PREMIER ── */
+  if (_showProgrammeMOE) {
+    html += `<tr style="background:var(--bg3);font-style:italic;opacity:.85;">`;
+    html += `<td style="${STK_TD_MOE}background:var(--bg3);">Programme MOE</td>`;
+    COLS.forEach(c => {
+      const moeVal = (window.LINE_PROGRAMME_MOE || {})[c.key] ?? '—';
+      html += `<td style="font-style:italic;color:var(--text2);">${moeVal}</td>`;
+    });
+    html += '</tr>';
+  }
+
+  /* ── Lignes scénarios nominaux + SP ── */
+  const nominals = all.filter(k => (k.sc.type || 'NOMINAL').toUpperCase() === 'NOMINAL');
+  nominals.forEach((k, si) => {
     const isActive = si === currentSc;
+    
+
+    // Ligne nominale
     html += `<tr class="${isActive ? 'active-sc' : ''}">`;
-    html += `<td style="${STK_TD}">${k.sc.label}</td>`;
+    html += `<td style="${STK_TD}">
+      <div style="display:flex;align-items:center;gap:5px;">
+        <span>${k.sc.label}</span>
+        ${(window._SP_MAP?.[k.scIdx]?.length > 0)
+          ? `<button onclick="toggleSPRows(${si})" 
+               id="spToggleBtn_${si}"
+               style="font-size:.55rem;padding:1px 4px;border-radius:3px;cursor:pointer;
+               background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.5);
+               color:#f5a623;font-weight:700;line-height:1.4;"
+               title="Afficher scénarios partiels">SP</button>`
+          : ''}
+      </div>
+    </td>`;
     COLS.forEach((c, ci) => {
       const v = k[c.key];
       const vNum = parseFloat(v) || 0;
@@ -1179,23 +1205,42 @@ function renderCompTable(all) {
       html += `<td class="${cls}">${c.fmt(v, k)}${arrow}</td>`;
     });
     html += '</tr>';
-  });
 
-  // Ligne Programme MOE (si checkbox cochée)
-  if (_showProgrammeMOE) {
-    html += `<tr class="moe-row" style="background:var(--bg3);font-style:italic;">`;
-    html += `<td style="${STK_TD};background:var(--bg3);">Programme MOE</td>`;
-    COLS.forEach(c => {
-      // Valeur MOE : injecter ici la logique métier si disponible
-      // Par défaut : cellule vide extensible
-      const moeVal = LINE.programmeMOE ? (LINE.programmeMOE[c.key] ?? '—') : '—';
-      html += `<td>${moeVal}</td>`;
+    // Lignes SP (masquées par défaut)
+    const spIdxs = window._SP_MAP?.[k.scIdx] || [];
+    spIdxs.forEach(spIdx => {
+      const spSc = LINE.scenarios[spIdx];
+      if (!spSc) return;
+      html += `<tr class="sp-row sp-row-${si}" style="display:none;
+        background:rgba(245,166,35,.08);
+        border-left:3px solid rgba(245,166,35,.6);">`;
+      html += `<td style="${STK_TD}background:rgba(245,166,35,.1);
+        font-style:italic;font-size:.75em;color:#f5a623;font-weight:600;">
+        ↳ ${spSc.label}
+      </td>`;
+      COLS.forEach(c => {
+        const spData = all.find(d => d.scIdx === spIdx);
+        const v = spData ? spData[c.key] : null;
+        html += `<td style="font-style:italic;font-size:.75em;color:var(--text3);">${c.fmt(v, k)}</td>`;
+      });
+      html += '</tr>';
     });
-    html += '</tr>';
-  }
+  });
 
   html += '</tbody>';
   tbl.innerHTML = html;
+}
+
+// Toggle affichage des lignes SP d'un nominal
+function toggleSPRows(si) {
+  const rows = document.querySelectorAll(`.sp-row-${si}`);
+  const btn  = document.getElementById(`spToggleBtn_${si}`);
+  const isVisible = rows.length > 0 && rows[0].style.display !== 'none';
+  rows.forEach(r => r.style.display = isVisible ? 'none' : '');
+  if (btn) {
+    btn.style.background   = isVisible ? 'rgba(245,166,35,.15)' : 'rgba(245,166,35,.35)';
+    btn.style.borderColor  = isVisible ? 'rgba(245,166,35,.5)'  : '#f5a623';
+  }
 }
 
 /* ── Export CSV du tableau comparatif ── */

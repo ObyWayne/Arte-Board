@@ -931,6 +931,7 @@ async function handleZip(file){
     let masterMeta = {departH:6,departM:5,serviceHeures:18};
     let masterCarousel = [];
     let masterInfra = [];
+    let LINE_PROGRAMME_MOE = {};
     const masterEntry = xlsxEntries['master'];
     if(masterEntry){
       const masterBuf = await masterEntry.async('arraybuffer');
@@ -939,6 +940,7 @@ async function handleZip(file){
       parseCarouselSheet(masterWb, imageMap);
       masterCarousel = [...CAROUSEL_SLIDES];
       masterInfra = parseInfraSchema(masterWb); // feuille INFRA dans master
+      LINE_PROGRAMME_MOE = parseProgrammeMOE(masterWb);
       parseColors(masterWb);
       applyBrandColors();
     }
@@ -1099,6 +1101,18 @@ function shadeColor(hex, pct){
   return '#'+[clamp(r),clamp(g),clamp(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
+function parseProgrammeMOE(wb) {
+  const ws = wb.Sheets['P_MOE'];
+  if (!ws) return {};
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+  const result = {};
+  rows.forEach(r => {
+    if (!r[0] || r[1] == null) return;
+    const key = String(r[0]).trim();
+    result[key] = r[1];
+  });
+  return result;
+}
 
 function parseMeta(wb){
   // Parse PARAMETRE sheet (categories B2:BXX)
