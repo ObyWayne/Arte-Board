@@ -214,25 +214,42 @@ function fsOpenRadar(){
   });
 }
 
-function fsOpenBubble(){
-  if(!LINE) return;
+function fsOpenBubble() {
+  if (!LINE) return;
   openFullscreen(document.getElementById('compBubbleTitle').textContent, body => {
-    Object.assign(body.style, {overflow:'auto', alignItems:'flex-start', padding:'0'});
-    const availW = Math.min(window.innerWidth, 2600);
+    Object.assign(body.style, { overflow: 'hidden', padding: '0', display: 'flex', flexDirection: 'row' });
+
     const availH = window.innerHeight - 62;
-    const wrap = document.createElement('div');
-    wrap.style.cssText = `width:${availW}px;height:${availH}px;flex-shrink:0;`;
+
+    // Axe Y1 sticky gauche
+    const axisL = document.createElement('canvas');
+    axisL.id = 'chargeAxisCanvas_fs';
+    axisL.style.cssText = 'flex-shrink:0;display:block;';
+
+    // Scroll horizontal
+    const scrollWrap = document.createElement('div');
+    scrollWrap.style.cssText = `flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;height:${availH}px;`;
+
     const c2 = document.createElement('canvas');
     c2.id = 'bubbleCanvasFs';
-    c2.width  = availW;
-    c2.height = availH;
-    c2.style.cssText = 'display:block;width:100%;height:100%;';
-    wrap.appendChild(c2);
-    body.appendChild(wrap);
-    requestAnimationFrame(()=>requestAnimationFrame(()=>
-      renderBubbleChartOnCanvas(c2, availW, availH,
-        window._lastBubbleAll||[], window._lastBubbleSc)
-    ));
+    c2.style.cssText = `display:block;height:${availH}px;`;
+
+    scrollWrap.appendChild(c2);
+    body.appendChild(axisL);
+    body.appendChild(scrollWrap);
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      // Swap ids pour que _renderBubbleYAxis trouve le bon canvas
+      const oldL = document.getElementById('chargeAxisCanvas');
+      if (oldL) oldL.id = '_chargeAxisCanvas_bak';
+      axisL.id = 'chargeAxisCanvas';
+
+      renderBubbleChartOnCanvas(c2, null, availH,
+        window._lastBubbleAll || [], window._lastBubbleSc ?? 0);
+
+      axisL.id = 'chargeAxisCanvas_fs';
+      if (oldL) oldL.id = 'chargeAxisCanvas';
+    }));
   });
 }
 

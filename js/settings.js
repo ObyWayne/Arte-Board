@@ -55,7 +55,6 @@ function setScenario(idx){
 function toggleDark(){
   isDark = !isDark;
   document.body.classList.toggle('light-mode', !isDark);
-  // Sidebar knob
   const knob = document.getElementById('darkKnob');
   const lbl  = document.getElementById('darkLbl');
   if(knob) knob.classList.toggle('light', !isDark);
@@ -63,6 +62,7 @@ function toggleDark(){
   drawClock();
   updateClockLegend();
   if(LINE && typeof renderMarcheType === 'function') renderMarcheType();
+  if(LINE && typeof renderComparatif === 'function') renderComparatif(); 
 }
 
 /* ── Dictionnaire bilingue ── */
