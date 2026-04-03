@@ -500,7 +500,7 @@ if (isAller) {
     cur += montees[i] - descentes[i];
     tmp[i] = Math.max(0, cur);
   }
-  chargeCum.push(...tmp); // ← était manquant / mal placé
+  chargeCum.push(...tmp);
 }
 
   /* ── Fréquence ── */
@@ -535,7 +535,7 @@ if (forcedH) {
   H = forcedH;
   canvas.dataset.lockedH = String(forcedH);
 } else if (canvas.dataset.lockedH) {
-  H = parseInt(canvas.dataset.lockedH);   // réutilise la hauteur déjà stabilisée
+  H = parseInt(canvas.dataset.lockedH);  
 } else {
   // Premier render : lire avant d'écrire
   const saved = canvas.style.height;
@@ -563,7 +563,7 @@ ctx.clearRect(0, 0, W, H);
      Inclut les flux DW de référence pour que les lignes
      soient toujours dans la zone visible.
   ══════════════════════════════════════════════ */
-  const allFluxVals = [...montees, ...descentes, ...dwRefFlux];
+  const allFluxVals = [...montees, ...descentes, ...dwRefFlux, ...chargeCum];
   ['aller', 'retour'].forEach(dir => {
     sts.forEach(s => {
       allFluxVals.push(dir === 'aller' ? (s.monteesA || 0) : (s.monteesR || 0));
