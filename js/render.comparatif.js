@@ -134,8 +134,7 @@ function renderComparatif(){
   
   // ── Montées/Descentes : sélection unique ──
   if (bubbleActiveSc === null || bubbleActiveSc >= allNominal.length) bubbleActiveSc = 0;
-  window._lastBubbleAll = allNominal;
-  _buildBubbleScPills(all);
+  _buildBubbleScPills(allNominal);
 
   
 
@@ -755,8 +754,8 @@ function _renderBubbleYAxis(PAD, H, PH, yMax, py, dpr, view) {
   const axCtx = axisCanvas.getContext('2d');
   axCtx.scale(dpr, dpr);
   const isLight = document.body.classList.contains('light-mode');
-  const bgCol   = getComputedStyle(document.documentElement).getPropertyValue('--bg2').trim()
-                || (isLight ? '#f0f2f7' : '#1f2435');
+  const bgCol = getComputedStyle(document.body).getPropertyValue('--bg2').trim() || (isLight ? '#f0f2f7' : '#1f2435');
+  
   axCtx.fillStyle = bgCol; axCtx.fillRect(0, 0, AW, H);
   const textCol = isLight ? 'rgba(60,70,90,.7)' : 'rgba(180,190,220,.55)';
   axCtx.fillStyle = textCol;
