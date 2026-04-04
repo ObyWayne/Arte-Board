@@ -71,8 +71,8 @@ function computeKPIsAll(){
       const tPrioA = LINE.inter.reduce((a,seg)=>a+(seg.tpsA||0),0)/60;
       const tPrioR = LINE.inter.reduce((a,seg)=>a+(seg.tpsR||0),0)/60;
       const nSt = LINE.stations.length || 1;
-      const moyMontees   = LINE.stations.reduce((a,s)=>a+(s.montees||0),0) / nSt;
-      const moyDescentes = LINE.stations.reduce((a,s)=>a+(s.descentes||0),0) / nSt;
+      const moyMontees   = LINE.stations.reduce((a,s)=>a+(s.monteesA||0),0) / nSt;
+      const moyDescentes = LINE.stations.reduce((a,s)=>a+(s.descentesA||0),0) / nSt;
       const nStations    = nSt;
       const distInterMoy = LINE.inter.length > 0
         ? +(LINE.inter.reduce((a,b)=>a+b.dist,0) / LINE.inter.length).toFixed(0)
@@ -848,18 +848,23 @@ let TERM_CATEGORIES = []; // from master PARAMETRE sheet B2:BXX
 
 /* Collecte toutes les données terminus pour tous les scénarios */
 function _getScTermData(all){
-  const saved={stations:LINE.stations,inter:LINE.inter,retournement:LINE.retournement,
-    tendu:LINE.tendu,tenduR:LINE.tenduR,detenteA:LINE.detenteA,detenteR:LINE.detenteR};
-  const result = all.map(k=>{
-    if(LINE.scenariosData&&LINE.scenariosData[k.scIdx]){
-      const d=LINE.scenariosData[k.scIdx];
-      LINE.stations=d.stations;LINE.inter=d.inter;LINE.retournement=d.retournement;
-      LINE.tendu=d.tendu;LINE.tenduR=d.tenduR;LINE.detenteA=d.detenteA;LINE.detenteR=d.detenteR;
+  const saved = {stations:LINE.stations, inter:LINE.inter, retournement:LINE.retournement,
+    tendu:LINE.tendu, tenduR:LINE.tenduR, detenteA:LINE.detenteA, detenteR:LINE.detenteR};
+  const result = [];
+  all.forEach(k => {
+    try {
+      if(LINE.scenariosData && LINE.scenariosData[k.scIdx]){
+        const d = LINE.scenariosData[k.scIdx];
+        LINE.stations=d.stations; LINE.inter=d.inter; LINE.retournement=d.retournement;
+        LINE.tendu=d.tendu; LINE.tenduR=d.tenduR; LINE.detenteA=d.detenteA; LINE.detenteR=d.detenteR;
+      }
+      const tsc = getTerminusForSc(k.scIdx);
+      result.push({sc:k.sc, scIdx:k.scIdx, termA:tsc.termA, retA:tsc.retA, termR:tsc.termR, retR:tsc.retR});
+    } catch(e) {
+      console.warn('[_getScTermData] skip scénario', k.scIdx, e.message);
     }
-    const tsc=getTerminusForSc(k.scIdx);
-    return {sc:k.sc,scIdx:k.scIdx,termA:tsc.termA,retA:tsc.retA,termR:tsc.termR,retR:tsc.retR};
   });
-  Object.assign(LINE,saved);
+  Object.assign(LINE, saved); 
   return result;
 }
 
