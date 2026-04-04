@@ -426,6 +426,7 @@ function renderBubbleChart(all, scIdx) {
   const canvas = document.getElementById('chargeCanvas');
   if (!canvas) return;
   window._lastBubbleAll = all;
+  window._lastBubbleSc  = scIdx;
   renderBubbleChartOnCanvas(canvas, null, null, all, scIdx);
 }
 
