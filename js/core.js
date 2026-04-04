@@ -38,8 +38,10 @@ function toggleOccupPct(){
   if(LINE && typeof renderOccupKPI === 'function') renderOccupKPI();
 }
 let radarActiveScenarios  = null;
-let bubbleActiveSc = null; // index unique du scénario affiché dans le graphique montées/descentes
-let bubbleDir = 'aller'; // direction affichée dans le graphique montées/descentes
+let bubbleActiveSc       = null;  // index unique du scénario affiché dans le graphique montées/descentes
+let bubbleDir            = 'aller'; // direction affichée dans le graphique montées/descentes
+let _chargeView          = 'flux'; // 'flux' | 'charge'
+let _dwVisible           = true;
 
 const CX=50, DOT_R=8, TERM_R=11, ROW_H=58, ROW_R=40;
 const CARREFOUR_RATIO=0.20;

@@ -36,9 +36,54 @@
   <!-- ── Ligne 2 col 1 : Montées / Descentes (2/4) ── -->
   <div class="chart-card comp-bubble-card" style="display:flex;flex-direction:column;">
   <div class="chart-card-header">
-    <div class="chart-card-title" id="compBubbleTitle">Montées / Descentes par station</div>
+    <div class="chart-card-title" id="compBubbleTitle">Sepent de Charge</div>
+  
+  <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
+
+    <!-- Bouton switch vue : ↑↓ ou icône charge -->
+    <button id="_bubbleViewBtn" title="Montées / Descentes"
+  class="fs-btn"
+  style="background:rgba(160,107,255,.2);border-color:rgba(160,107,255,.6);color:#a06bff;"
+  onclick="
+    _chargeView = _chargeView === 'flux' ? 'charge' : 'flux';
+    this.innerHTML = _chargeView === 'flux' ? '↑↓' : '↑↓';
+    this.title     = _chargeView === 'flux' ? 'Montées / Descentes' : 'Charge';
+    if (_chargeView === 'flux') {
+      this.style.background  = 'rgba(160,107,255,.2)';
+      this.style.borderColor = 'rgba(160,107,255,.6)';
+      this.style.color       = '#a06bff';
+    } else {
+      this.style.background  = '';
+      this.style.borderColor = '';
+      this.style.color       = '';
+    }
+    if (window._lastBubbleAll)
+      renderBubbleChartOnCanvas(document.getElementById('chargeCanvas'), null, null,
+        window._lastBubbleAll, window._lastBubbleSc ?? 0);
+  ">↑↓</button>
+
+    <button id="_bubbleDwBox" title="DW théorique + seuils"
+  class="fs-btn"
+  style="background:rgba(180,140,255,.1);border-color:rgba(180,140,255,.35);color:rgba(180,140,255,.9);"
+  onclick="
+    _dwVisible = !_dwVisible;
+    if (_dwVisible) {
+      this.style.background  = 'rgba(180,140,255,.1)';
+      this.style.borderColor = 'rgba(180,140,255,.35)';
+      this.style.color       = 'rgba(180,140,255,.9)';
+    } else {
+      this.style.background  = '';
+      this.style.borderColor = '';
+      this.style.color       = '';
+    }
+    if (window._lastBubbleAll)
+      renderBubbleChartOnCanvas(document.getElementById('chargeCanvas'), null, null,
+        window._lastBubbleAll, window._lastBubbleSc ?? 0);
+  ">⏲</button>
+
     <button class="fs-btn" onclick="fsOpenBubble()" title="Plein écran">⛶</button>
   </div>
+</div>
   <!-- Sélecteur scénario : pills style projet, sélection unique -->
   <div style="display:flex;align-items:center;gap:8px;padding:.3rem .5rem .2rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;flex-wrap:wrap;">
   <!-- Sélecteur scénario (pills) -->
