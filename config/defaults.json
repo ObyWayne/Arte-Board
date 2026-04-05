@@ -1,0 +1,12 @@
+{
+  "coeffMarcheTendue": 1.1,
+  "occupSeuilVert": 20,
+  "occupSeuilOrange": 30,
+  "freqDefaultHP": 10,
+  "freqDefaultHC": 15,
+  "ganttAxisStepMin": 5,
+  "speedUnit": "km/h",
+  "decTime": 1,
+  "decDist": 2,
+  "decSpd": 1
+}

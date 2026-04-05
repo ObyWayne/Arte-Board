@@ -1,0 +1,162 @@
+<div class="comp-grid">
+
+  <!-- ── Ligne 1 : Tableau synthèse (pleine largeur) ── -->
+  <div class="chart-card comp-table-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;gap:.35rem;flex-wrap:wrap;">
+    <div class="chart-card-title" id="compTableTitle" style="margin-bottom:0">Tableau synthèse</div>
+    <div style="display:flex;align-items:center;gap:.35rem;margin-left:auto;flex-wrap:wrap;">
+
+      <!-- Checkbox Programme MOE -->
+      <label style="display:flex;align-items:center;gap:.3rem;font-size:.62rem;font-weight:700;color:var(--text3);cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" checked onchange="toggleProgrammeMOE(this.checked)"
+          style="accent-color:var(--purple);cursor:pointer;">
+        Programme MOE
+      </label>
+
+      <!-- Sélecteur colonnes -->
+      <div class="col-picker-wrap">
+        <button class="col-picker-btn" onclick="toggleColPicker(event)">⚙ Colonnes ▾</button>
+        <div class="col-picker-dropdown" id="colPickerDropdown"></div>
+      </div>
+
+      <!-- Bouton Export — même style que fs-btn -->
+      <button class="fs-btn" onclick="exportCompTableCSV()" title="Export CSV">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v9M4 7l3 4 3-4M1 13h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+
+      <!-- Plein écran -->
+      <button class="fs-btn" onclick="fsOpenCompTable()" title="Plein écran">⛶</button>
+    </div>
+  </div>
+  <div class="comp-table-scroll">
+    <table id="compTable" class="comp-synth-table"></table>
+  </div>
+</div>
+
+  <!-- ── Ligne 2 col 1 : Montées / Descentes (2/4) ── -->
+  <div class="chart-card comp-bubble-card" style="display:flex;flex-direction:column;">
+  <div class="chart-card-header">
+    <div class="chart-card-title" id="compBubbleTitle">Sepent de Charge</div>
+  
+  <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
+
+    <!-- Bouton switch vue : ↑↓ ou icône charge -->
+    <button id="_bubbleViewBtn" title="Montées / Descentes"
+  class="fs-btn"
+  style="background:rgba(160,107,255,.2);border-color:rgba(160,107,255,.6);color:#a06bff;"
+  onclick="
+    _chargeView = _chargeView === 'flux' ? 'charge' : 'flux';
+    this.innerHTML = _chargeView === 'flux' ? '↑↓' : '↑↓';
+    this.title     = _chargeView === 'flux' ? 'Montées / Descentes' : 'Charge';
+    if (_chargeView === 'flux') {
+      this.style.background  = 'rgba(160,107,255,.2)';
+      this.style.borderColor = 'rgba(160,107,255,.6)';
+      this.style.color       = '#a06bff';
+    } else {
+      this.style.background  = '';
+      this.style.borderColor = '';
+      this.style.color       = '';
+    }
+    if (window._lastBubbleAll)
+      renderBubbleChartOnCanvas(document.getElementById('chargeCanvas'), null, null,
+        window._lastBubbleAll, window._lastBubbleSc ?? 0);
+  ">↑↓</button>
+
+    <button id="_bubbleDwBox" title="DW théorique + seuils"
+  class="fs-btn"
+  style="background:rgba(180,140,255,.1);border-color:rgba(180,140,255,.35);color:rgba(180,140,255,.9);"
+  onclick="
+    _dwVisible = !_dwVisible;
+    if (_dwVisible) {
+      this.style.background  = 'rgba(180,140,255,.1)';
+      this.style.borderColor = 'rgba(180,140,255,.35)';
+      this.style.color       = 'rgba(180,140,255,.9)';
+    } else {
+      this.style.background  = '';
+      this.style.borderColor = '';
+      this.style.color       = '';
+    }
+    if (window._lastBubbleAll)
+      renderBubbleChartOnCanvas(document.getElementById('chargeCanvas'), null, null,
+        window._lastBubbleAll, window._lastBubbleSc ?? 0);
+  ">⏲</button>
+
+    <button class="fs-btn" onclick="fsOpenBubble()" title="Plein écran">⛶</button>
+  </div>
+</div>
+  <!-- Sélecteur scénario : pills style projet, sélection unique -->
+  <div style="display:flex;align-items:center;gap:8px;padding:.3rem .5rem .2rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;flex-wrap:wrap;">
+  <!-- Sélecteur scénario (pills) -->
+  <div id="chargeScSelector" style="display:flex;flex-wrap:wrap;gap:5px;flex:1;"></div>
+  <!-- Bouton direction -->
+  <div style="display:flex;gap:4px;flex-shrink:0;">
+    <button class="dir-btn dir-btn-aller active" id="bubbleDirBtnA"
+            onclick="setBubbleDir('aller')">↓ Aller</button>
+    <button class="dir-btn dir-btn-retour" id="bubbleDirBtnR"
+            onclick="setBubbleDir('retour')">↑ Retour</button>
+  </div>
+</div>
+  <!-- Canvas : prend toute la hauteur restante du bloc -->
+  <div style="display:flex;flex:1;min-height:0;">
+    <canvas id="chargeAxisCanvas" style="flex-shrink:0;display:block;"></canvas>
+    <div class="comp-bubble-scroll" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;">
+      <canvas id="chargeCanvas" style="display:block;height:100%;"></canvas>
+    </div>
+  </div>
+</div>
+
+  <!-- ── Ligne 2 col 2 : Radar des indicateurs (1/4) ── -->
+  <div class="chart-card comp-radar-card">
+    <div class="chart-card-header">
+      <div class="chart-card-title" id="compRadarTitle">Radar des indicateurs</div>
+      <button class="fs-btn" onclick="fsOpenRadar()" title="Plein écran">⛶</button>
+    </div>
+    <div id="radarScSelector" style="display:flex;flex-wrap:wrap;gap:.35rem;padding:.3rem .5rem .1rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;min-height:28px;"></div>
+    <div style="display:flex;align-items:center;justify-content:center;">
+      <svg id="radarSvg" viewBox="0 0 320 280" style="width:100%;max-width:340px;height:auto;"></svg>
+    </div>
+  </div>
+
+  <!-- ── Lignes 2+3 col 3 : Carte du tracé (1/4, span 2 lignes) ── -->
+  <div class="chart-card comp-map-card">
+    <div class="chart-card-header">
+      <div class="chart-card-title" id="compMapTitle">Carte du tracé</div>
+      <div style="display:flex;gap:.25rem;align-items:center;">
+        <button class="fs-btn map-tile-btn active" data-tile="standard"  onclick="setMapTile('standard')"  title="Standard">🗺 Std</button>
+        <button class="fs-btn map-tile-btn"        data-tile="satellite" onclick="setMapTile('satellite')" title="Satellite">🛰 Sat</button>
+        <button class="fs-btn map-tile-btn"        data-tile="transport" onclick="setMapTile('transport')" title="Transport">🚌 Tsp</button>
+        <button class="fs-btn" onclick="fsOpenMap()" title="Plein écran">⛶</button>
+      </div>
+    </div>
+    <div class="map-container">
+      <div id="osmMap">
+        <div class="map-no-data">
+          <div class="map-no-data-icon">🗺️</div>
+          <div id="mapNoDataTxt">Chargez un fichier pour afficher le tracé</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Ligne 3 cols 1-2 : Couverture SP (3/4) ── -->
+  <div class="chart-card comp-sp-card">
+    <div class="chart-card-header">
+      <div class="chart-card-title" id="compSPTitle">Couverture des incidents par scénario SP</div>
+      <button class="fs-btn" onclick="fsOpenSP()" title="Plein écran">⛶</button>
+    </div>
+    <!-- scroll horiz + vert interne uniquement -->
+    <div class="sp-matrix-wrap">
+      <div id="spMatrixContainer"></div>
+    </div>
+  </div>
+
+  <!-- ── Ligne 4 : Comparaison terminus (pleine largeur) ── -->
+  <div class="chart-card comp-terminus-card">
+    <div class="chart-card-header">
+      <div class="chart-card-title" id="compTermTitle">Comparaison des temps au terminus</div>
+      <button class="fs-btn" onclick="fsOpenCompTerminus()" title="Plein écran">⛶</button>
+    </div>
+    <div id="compTermContent"><div style="color:var(--text3);font-size:.6rem;padding:.5rem;">—</div></div>
+  </div>
+
+</div>
