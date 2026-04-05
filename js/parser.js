@@ -30,8 +30,8 @@ function secToMMS(sec){
   const m=Math.floor(s/60),ss=s%60;
   return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
 }
-function fmtMin(m){const mn=Math.floor(m),s=Math.round((m-mn)*60);return s>0?`${mn}m${String(s).padStart(2,'0')}s`:`${mn}m`;}
-function fmtS(s){const mn=Math.floor(s/60),ss=s%60;return ss>0?`${mn}m${String(ss).padStart(2,'0')}s`:`${mn}m`;}
+function fmtMin(m){const mn=Math.floor(m),s=Math.round((m-mn)*60);return s>0?`${mn}m ${String(s).padStart(2,'0')}s`:`${mn}m`;}
+function fmtS(s){const mn=Math.floor(s/60),ss=s%60;return ss>0?`${mn}m ${String(ss).padStart(2,'0')}s`:`${mn}m`;}
 function secToStr(s){const mn=Math.floor(s/60),ss=s%60;return `${String(mn).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;}
 
 
@@ -1744,30 +1744,30 @@ function renderOccupKPI(){
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.innerHTML=v; };
   const setTxt = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
   const sts = LINE.stations;
-  // Terminus A = première station, Terminus R = dernière station
   const stA = sts[0], stR = sts[sts.length-1];
-  const fmtOccup = (st, id) => {
-    const el = document.getElementById(id);
+
+  const fmtCell = (st, valId) => {
+    // Temps de retournement
+    const ret = st ? getRetournement(st.nom) : null;
+    const retVal = ret ? `<span style="color:var(--pink)">${fmtMin(ret.totalSec/60)}</span>` : `<span style="color:var(--text3)">—</span>`;
+
+    // Taux d'occupation en sub
+    let occupSub = '';
     if(st && st.occup !== null && st.occup !== undefined){
       const pct = st.occup <= 1 ? Math.round(st.occup*100) : Math.round(st.occup);
-      const sec = st.occup <= 1 ? Math.round(st.occup * (computeKPIs(currentSc).tCycleMin||0) * 60)
-                                : Math.round(st.occup / 100 * (computeKPIs(currentSc).tCycleMin||0) * 60);
-      if(el){ el.dataset.pct = pct; el.dataset.sec = sec; }
-      if(_occupShowPct){
-        return {val:`<span style="color:var(--pink)">${pct}<span class="kpi-unit">%</span></span>`};
-      } else {
-        return {val:`<span style="color:var(--pink)">${fmtMin(sec/60)}</span>`};
-      }
+      occupSub = `${pct}% occup.`;
     }
-    return {val:`<span style="color:var(--text3)">—</span>`};
+    return { retVal, occupSub };
   };
-  const oA = fmtOccup(stA, 'kpiOccupA'), oR = fmtOccup(stR, 'kpiOccupR');
-  setTxt('kpiOccupALabel', stA ? stA.nom : isEN?'Term. A':'Term. A');
-  setTxt('kpiOccupRLabel', stR ? stR.nom : isEN?'Term. R':'Term. R');
-  set('kpiOccupA', oA.val);
-  set('kpiOccupR', oR.val);
-  set('kpiOccupASub', isEN?'Occupancy':'Taux occup.');
-  set('kpiOccupRSub', isEN?'Occupancy':'Taux occup.');
+
+  const oA = fmtCell(stA, 'kpiOccupA');
+  const oR = fmtCell(stR, 'kpiOccupR');
+  setTxt('kpiOccupALabel', stA ? stA.nom : 'Term. A');
+  setTxt('kpiOccupRLabel', stR ? stR.nom : 'Term. R');
+  set('kpiOccupA', oA.retVal);
+  set('kpiOccupR', oR.retVal);
+  set('kpiOccupASub', oA.occupSub);
+  set('kpiOccupRSub', oR.occupSub);
 }
 
 function renderKPIs(scIdx){
@@ -1783,6 +1783,28 @@ function renderKPIs(scIdx){
     const COL_A = BRAND.primaire2,      COL_B = BRAND.primaire2;
     const COL_VA = BRAND.aller,          COL_VR = BRAND.retour;
 
+    // A1/B1 Temps aller / retour
+    set('kpiTpsA',
+  `<div style="line-height:1.4">
+    <span style="font-size:1.45rem;font-weight:800;color:${COL_VA}">${fmtMin(tA.tA)}</span>
+    <span style="font-size:.56rem;font-weight:700;color:${COL_VA};margin-left:.3rem">${tA.label}</span>
+  </div>
+  <div style="line-height:1.4;margin-top:.2rem">
+    <span style="font-size:1.45rem;font-weight:800;color:${COL_VA}">${fmtMin(tB.tA)}</span>
+    <span style="font-size:.56rem;font-weight:700;color:${COL_VA};margin-left:.3rem">${tB.label}</span>
+  </div>`);
+set('kpiTpsASub', '');
+set('kpiTpsR',
+  `<div style="line-height:1.4">
+    <span style="font-size:1.45rem;font-weight:800;color:${COL_VR}">${fmtMin(tA.tR)}</span>
+    <span style="font-size:.56rem;font-weight:700;color:${COL_VR};margin-left:.3rem">${tA.label}</span>
+  </div>
+  <div style="line-height:1.4;margin-top:.2rem">
+    <span style="font-size:1.45rem;font-weight:800;color:${COL_VR}">${fmtMin(tB.tR)}</span>
+    <span style="font-size:.56rem;font-weight:700;color:${COL_VR};margin-left:.3rem">${tB.label}</span>
+  </div>`);
+set('kpiTpsRSub', '');
+
     // A1 Flotte nécessaire — 2 lignes, couleur par tronçon
     set('kpiFlotte',
       `<div style="line-height:1.4">
@@ -1795,11 +1817,9 @@ function renderKPIs(scIdx){
         <span class="kpi-unit">veh</span>
         <span style="font-size:.56rem;font-weight:700;color:${COL_B};margin-left:.3rem">${tB.label}</span>
       </div>`);
-    set('kpiFlotteSub', `f${sc.freqMin} min · ${T('cycleFreq')} ${fmtMin(tA.tCyc)} / ${fmtMin(tB.tCyc)}`);
-
-    // B1 Flotte totale
-    set('kpiFlotteTot', `${k.flotteTot}<span class="kpi-unit">veh</span>`);
-    set('kpiFlotteTotSub', T('expl').replace('{n}',k.flotteNec).replace('{r}',k.flotteTot-k.flotteNec));
+    set('kpiFlotteSub', `<span style="color:var(--green)">+${k.flotteTot - k.flotteNec}</span> en réserve`);
+    set('kpiSMR', sc.smrCapacite != null ? `<span style="color:var(--green)">${sc.smrCapacite}</span><span class="kpi-unit">veh</span>` : '—');
+    set('kpiSMRSub', '');
 
     // A2 Vit. Aller — valeur + tronçon inline, même couleur
     set('kpiVitA',
@@ -1831,22 +1851,24 @@ function renderKPIs(scIdx){
 
     // C Cycle — les 2 tronçons en haut, occup terminus en bas
     set('kpiCycleLabel', `${T('kpiLabelCycle')} · ${tA.label} / ${tB.label}`);
-    set('kpiCycle',   `${Math.round(tA.tCyc)}<span class="kpi-unit">min</span> · ${Math.round(tB.tCyc)}<span class="kpi-unit">min</span>`);
-    set('kpiCycleSub', '');
+    set('kpiCycle',   `${fmtMin(tA.tCyc)} · ${fmtMin(tB.tCyc)}`);
     renderOccupKPI();
     renderDepotKPI(k);
   } else {
-    set('kpiFlotte',    `${k.flotteNec}<span class="kpi-unit">veh</span>`);
-    set('kpiFlotteSub', `${T('cycleFreq')} ${fmtMin(k.tCycleMin)} / ${T('freq')} ${sc.freqMin}min`);
-    set('kpiFlotteTot', `${k.flotteTot}<span class="kpi-unit">veh</span>`);
-    set('kpiFlotteTotSub', T('reserve').replace('{n}', k.flotteTot-k.flotteNec));
+    set('kpiTpsA',      fmtMin(k.tAllerMin));
+    set('kpiTpsASub',   `${k.totalDistKm.toFixed(_decDist)} km`);
+    set('kpiTpsR',      fmtMin(k.tRetourMin));
+    set('kpiTpsRSub',   `${k.totalDistKm.toFixed(_decDist)} km`);
+    set('kpiFlotte',    `<span style="color:var(--green)">${k.flotteNec}</span><span class="kpi-unit">veh</span>`);
+    set('kpiFlotteSub', `+<span style="color:var(--green);font-size:1.25rem;font-weight:800">${k.flotteTot - k.flotteNec}</span> en réserve`);
+    set('kpiSMR',       sc.smrCapacite != null ? `<span style="color:var(--green)">${sc.smrCapacite}</span><span class="kpi-unit">veh</span>` : '—');
+    set('kpiSMRSub',    '');
     set('kpiVitA',      `${cvtSpd(k.vitA)}<span class="kpi-unit">${spdUnit()}</span>`);
     set('kpiVitASub',   `${k.totalDistKm.toFixed(_decDist)} km · ${fmtMin(k.tAllerMin)}`);
     set('kpiVitR',      `${cvtSpd(k.vitR)}<span class="kpi-unit">${spdUnit()}</span>`);
     set('kpiVitRSub',   `${k.totalDistKm.toFixed(_decDist)} km · ${fmtMin(k.tRetourMin)}`);
     set('kpiCycleLabel', T('kpiLabelCycle'));
-    set('kpiCycle',     `${Math.round(k.tCycleMin)}<span class="kpi-unit">min</span>`);
-    set('kpiCycleSub',  T('outIn').replace('{a}',fmtMin(k.tAllerMin)).replace('{r}',fmtMin(k.tRetourMin)));
+    set('kpiCycle',     fmtMin(k.tCycleMin));
     renderOccupKPI();
     renderDepotKPI(k);
   }
