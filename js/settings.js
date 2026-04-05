@@ -185,6 +185,7 @@ const DICT = {
   // Comparatif
   compSPTitle:      {fr:'Couverture des incidents par scénario SP', en:'Incident coverage — SP scenarios'},
   compBubbleTitle:  {fr:'Montées / Descentes par station',          en:'Boardings / Alightings per stop'},
+  compRadarTitle:   {fr:'Radar des indicateurs',           en:'Indicator Tracker'},
   noNominalSc:      {fr:'Aucun scénario nominal',                   en:'No nominal scenario'},
   noSPLoaded:       {fr:'Aucun scénario SP chargé',                 en:'No SP scenario loaded'},
   tronconUnique:    {fr:'Tronçon unique',                           en:'Single section'},
@@ -276,6 +277,7 @@ function applyLang(){
   setTxt('kpiLabelRentrees', T('depotRentrees'));
   // Comparatif titles
   setTxt('compBubbleTitle', T('compBubbleTitle'));
+  setTxt('compRadarTitle',  T('compRadarTitle'));
   // Footer
   set('footerLeft', T('footerLeft'));
   // Re-render dynamic content

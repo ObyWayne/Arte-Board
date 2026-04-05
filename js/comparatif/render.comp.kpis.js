@@ -73,20 +73,23 @@ function renderComparatif(){
     return;
   }
 
-  const SC_COLORS = [BRAND.aller, BRAND.retour, BRAND.primaire2, BRAND.cycle, BRAND.primaire1,'#e8453c'];
+  const SC_COLORS = _radarColors(); // ← palette brand-safe depuis render.comp.radar.js
 
-  // ── Radar : nominaux uniquement ──
-  if(!radarActiveScenarios || radarActiveScenarios.size === 0)
-    radarActiveScenarios = new Set(all.map((_,i)=>i).filter(i=>all[i].sc.type==='NOMINAL'));
-  for(const idx of radarActiveScenarios)
-    if(idx>=all.length||all[idx].sc.type!=='NOMINAL') radarActiveScenarios.delete(idx);
+// ── Radar : nominaux uniquement ──
+if(!radarActiveScenarios || radarActiveScenarios.size === 0)
+  radarActiveScenarios = new Set(all.map((_,i)=>i).filter(i=>all[i].sc.type==='NOMINAL'));
+for(const idx of radarActiveScenarios)
+  if(idx>=all.length||all[idx].sc.type!=='NOMINAL') radarActiveScenarios.delete(idx);
 
-  const radarSel = document.getElementById('radarScSelector');
-  radarSel.innerHTML = all.map((k,i)=>{
-    if(k.sc.type !== 'NOMINAL') return '';
-    const col=SC_COLORS[i%SC_COLORS.length], on=radarActiveScenarios.has(i);
-    return `<button class="radar-sc-btn${on?' on':''}" style="border-color:${col};color:${col};${on?`background:${col}22`:''}" onclick="toggleRadarSc(${i})">${k.sc.label}</button>`;
-  }).join('');
+const radarSel = document.getElementById('radarScSelector');
+radarSel.innerHTML = all.map((k,i)=>{
+  if(k.sc.type !== 'NOMINAL') return '';
+  const col = SC_COLORS[i % SC_COLORS.length], on = radarActiveScenarios.has(i);
+  // sc-pill avec couleur dynamique (même style que serpent de charge)
+  return `<div class="sc-pill${on?' on':''}"
+    style="${on?`border-color:${col};color:${col};background:${col}18;`:`border-color:${col}55;color:${col}88;`}"
+    onclick="toggleRadarSc(${i})">${k.sc.label}</div>`;
+}).join('');
 
   const SPFiltered = all.filter((_,i)=>radarActiveScenarios.has(i));
   const allNominal = all.filter(d => (d.sc.type||'NOMINAL').toUpperCase() === 'NOMINAL');

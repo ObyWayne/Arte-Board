@@ -192,8 +192,8 @@ function fsOpenRadar(){
   if(!LINE) return;
   openFullscreen(document.getElementById('compRadarTitle').textContent, body => {
     Object.assign(body.style, {alignItems:'center', justifyContent:'center'});
-    const fsW = Math.min(window.innerWidth - 80, 700);
-    const fsH = Math.min(window.innerHeight - 110, 650);
+    const fsW = Math.min(window.innerWidth - 40, 900);
+    const fsH = Math.min(window.innerHeight - 80, 860);
     const wrap = document.createElement('div');
     wrap.style.cssText = `width:${fsW}px;height:${fsH}px;`;
     const canvasFs = document.createElement('canvas');
