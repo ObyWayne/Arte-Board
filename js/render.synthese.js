@@ -146,6 +146,13 @@ function _buildSVG(sc, scIdx, k) {
 
   /* ── Scorecard (META xlsx) ─────────────────────── */
   /* Défaut SCORECARD_CRITERIA si clé META absente */
+  let SCORECARD_CRITERIA = [
+  {key:'capacite',    fr:'Capacité',    en:'Capacity',    score:5},
+  {key:'regularite',  fr:'Régularité',  en:'Regularity',  score:4},
+  {key:'faisabilite', fr:'Faisabilité', en:'Feasibility', score:5},
+  {key:'efficacite',  fr:'Efficacité',  en:'Efficiency',  score:4},
+];
+
   const _scCrit = (key) => (SCORECARD_CRITERIA || []).find(c => c.key === key)?.score ?? 3.5;
 
   const sGlob = meta.scorecardGlobal     ?? _scCrit('all');
