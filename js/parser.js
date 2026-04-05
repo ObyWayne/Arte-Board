@@ -1223,7 +1223,10 @@ function parseRetournement(wb){
       const col4 = r[4]!=null?String(r[4]).trim():'';
       const col5 = r[5]!=null?parseInt(r[5]):null;
       const col6 = r[6]!=null?String(r[6]).trim():'';
-      retournement[key].params.push({label:col1, sec:col2, occ:col3, voie:col4, ordre:col5, categorie:col6});
+      const col7 = r[7];
+      const isCompressible = col7===true || col7===1 ||
+      (typeof col7==='string' && ['true','vrai','1'].includes(col7.toLowerCase().trim()));
+      retournement[key].params.push({label:col1, sec:col2, occ:col3, voie:col4, ordre:col5, categorie:col6, compressible:isCompressible});
       retournement[key].totalSec+=col2;
     } else if(!isNaN(parseInt(r[1]))){
       const val=parseInt(r[1])||0;
