@@ -216,8 +216,8 @@ function applyLang(){
   setTxt('scGlobalLabel',       T('synthGlobal'));
   // Re-render langue-dépendant
   if(LINE && currentTab==='terminus') renderTerminus();
-  renderScorecard();
   if(currentTab==='comparatif' && LINE) renderComparatif();
+  
   // Topbar
   const _ib=document.querySelector('.import-btn'); if(_ib) _ib.textContent=T('importBtn')||'📂 Import xlsx / zip';
   setTxt('topEtude',     T('topEtude'));
