@@ -98,11 +98,12 @@ radarSel.innerHTML = all.map((k,i)=>{
   if (bubbleActiveSc === null || bubbleActiveSc >= allNominal.length) bubbleActiveSc = 0;
   _buildBubbleScPills(allNominal);
 
-  try { renderRadar(all, SPFiltered); }          catch(e){ console.error('[renderComparatif] renderRadar:', e); }
-  try { renderBubbleChart(allNominal, bubbleActiveSc); } catch(e){ console.error('[renderComparatif] renderBubbleChart:', e); }
-  try { renderCompTable(all); }                  catch(e){ console.error('[renderComparatif] renderCompTable:', e); }
-  try { renderSPMatrix(); }                      catch(e){ console.error('[renderComparatif] renderSPMatrix:', e); }
-  try { renderCompTerminus(all); }               catch(e){ console.error('[renderComparatif] renderCompTerminus:', e); }
+  try { renderRadar(all, SPFiltered); }                   catch(e){ console.error('[renderComparatif] renderRadar:', e); }
+  try { renderBubbleChart(allNominal, bubbleActiveSc); }  catch(e){ console.error('[renderComparatif] renderBubbleChart:', e); }
+  try { renderCompTable(all); }                           catch(e){ console.error('[renderComparatif] renderCompTable:', e); }
+  try { renderSPMatrix(); }                               catch(e){ console.error('[renderComparatif] renderSPMatrix:', e); }
+  try { renderCompTerminus(all); }                        catch(e){ console.error('[renderComparatif] renderCompTerminus:', e); }
+  try { renderEnergyFlow(all); }                          catch(e){ console.error('[renderComparatif] renderEnergyFlow:', e); }
 }
 
 /* ── Handlers UI ── */

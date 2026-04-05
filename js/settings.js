@@ -187,6 +187,7 @@ const DICT = {
   compBubbleTitle:  {fr:'Montées / Descentes par station',          en:'Boardings / Alightings per stop'},
   compRadarTitle:   {fr:'Radar des indicateurs',           en:'Indicator Tracker'},
   compTermTitle:    {fr:'Comparaison des temps au terminus', en:'Terminus Time Comparison'},
+  energyFlowTitle:  {fr:'Flow du cycle', en:'Cycle Flow'},
   noNominalSc:      {fr:'Aucun scénario nominal',                   en:'No nominal scenario'},
   noSPLoaded:       {fr:'Aucun scénario SP chargé',                 en:'No SP scenario loaded'},
   tronconUnique:    {fr:'Tronçon unique',                           en:'Single section'},
@@ -276,11 +277,12 @@ function applyLang(){
   setTxt('kpiLabelDepot',    T('depotMouvements'));
   setTxt('kpiLabelSorties',  T('depotSorties'));
   setTxt('kpiLabelRentrees', T('depotRentrees'));
-  
+
   // Comparatif titles
   setTxt('compBubbleTitle', T('compBubbleTitle'));
   setTxt('compRadarTitle',  T('compRadarTitle'));
   setTxt('compTermTitle',  T('compTermTitle'));
+  setTxt('energyFlowTitle', T('energyFlowTitle'));
 
   // Footer
   set('footerLeft', T('footerLeft'));

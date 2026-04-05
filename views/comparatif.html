@@ -156,13 +156,27 @@
     </div>
   </div>
 
-  <!-- ── Ligne 4 : Comparaison terminus (pleine largeur) ── -->
-  <div class="chart-card comp-terminus-card">
-    <div class="chart-card-header">
-      <div class="chart-card-title" id="compTermTitle">Comparaison des temps au terminus</div>
-      <button class="fs-btn" onclick="fsOpenCompTerminus()" title="Plein écran">⛶</button>
+  <!-- ── Ligne 4 : Energy Flow + Comparaison terminus (50/50) ── -->
+  <div class="comp-row4">
+    <div class="chart-card comp-energy-card">
+      <div class="chart-card-header">
+    <div class="chart-card-title" id="energyFlowTitle">Flow du cycle</div>
+    <div style="display:flex;gap:.25rem;align-items:center;">
+      <button class="fs-btn" id="efGroupTermBtn"
+        onclick="toggleEfGroupTerminus()"
+        title="Grouper les terminus">🏁</button>
+      <button class="fs-btn" onclick="fsOpenEnergyFlow()" title="Plein écran">⛶</button>
     </div>
-    <div id="compTermContent"><div style="color:var(--text3);font-size:.6rem;padding:.5rem;">—</div></div>
+  </div>
+      <div id="energyFlowContent"></div>
+    </div>
+    <div class="chart-card comp-terminus-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title" id="compTermTitle">Comparaison des temps au terminus</div>
+        <button class="fs-btn" onclick="fsOpenCompTerminus()" title="Plein écran">⛶</button>
+      </div>
+      <div id="compTermContent"><div style="color:var(--text3);font-size:.6rem;padding:.5rem;">—</div></div>
+    </div>
   </div>
 
 </div>

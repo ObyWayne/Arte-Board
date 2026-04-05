@@ -1,18 +1,26 @@
-/* ── render.comp.utils.js — Utilitaires de formatage + comportements UI partagés ── */
+/* ── render.comp.utils.js — Utilitaires + comportements UI partagés ── */
 
 /* ══════════════════════════════════════════════════════
-   SCROLL-CLOSE GLOBAL — tous les .col-picker-dropdown
-   Ferme les menus au scroll, SAUF si le scroll est
-   à l'intérieur du menu lui-même (pour pouvoir scroller
-   la liste d'options sans la fermer).
+   FERMETURE GLOBALE DES MENUS DÉROULANTS
+   • Scroll en dehors du menu  → ferme
+   • Clic en dehors du menu   → ferme
+   • Scroll dans le menu      → reste ouvert (sélection possible)
 ══════════════════════════════════════════════════════ */
+
+/* Fermeture au scroll — capture phase pour intercepter tous les containers */
 window.addEventListener('scroll', (e) => {
-  // Si le scroll vient de l'intérieur d'un dropdown → on laisse ouvert
   if (e.target && typeof e.target.closest === 'function' &&
       e.target.closest('.col-picker-dropdown')) return;
   document.querySelectorAll('.col-picker-dropdown.open')
           .forEach(d => d.classList.remove('open'));
-}, true /* capture : intercepte tous les containers scrollables */);
+}, true);
+
+/* Fermeture au clic en dehors d'un .col-picker-wrap */
+document.addEventListener('click', (e) => {
+  if (e.target.closest && e.target.closest('.col-picker-wrap')) return;
+  document.querySelectorAll('.col-picker-dropdown.open')
+          .forEach(d => d.classList.remove('open'));
+});
 
 
 /* ══════════════════════════════════════════════════════
@@ -38,9 +46,7 @@ function fmtHhMmSs(minutes) {
   return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
 }
 
-// Formate la valeur SMR :
-// - nombre pur → affiché tel quel (capacité passagers)
-// - contient ":" → format mm:ss
+// Formate la valeur SMR
 function fmtSmr(val) {
   if (val === null || val === undefined || val === '') return '—';
   const n = parseFloat(val);
