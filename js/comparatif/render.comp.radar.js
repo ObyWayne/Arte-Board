@@ -1,8 +1,5 @@
 /* ── render.comp.radar.js — Graphique radar KPI scénarios nominaux ── */
 
-let _lastRadarAll      = null;
-let _lastRadarFiltered = null;
-
 function renderRadar(all, filtered){
   _lastRadarAll = all; _lastRadarFiltered = filtered;
   const svg = document.getElementById('radarSvg');
