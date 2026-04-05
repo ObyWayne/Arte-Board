@@ -68,8 +68,8 @@ function renderComparatif(){
   if(all.length === 0){
     document.getElementById('radarScSelector').innerHTML  = '';
     document.getElementById('chargeScSelector').innerHTML = '';
-    const el=document.getElementById('radarSvg');
-    if(el) el.innerHTML=`<text x="160" y="140" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-size="11" fill="var(--text3)">Aucune donnée disponible</text>`;
+    const el = document.getElementById('radarCanvas');
+    if(el){ const ctx=el.getContext('2d'); ctx.clearRect(0,0,el.width,el.height); }
     return;
   }
 

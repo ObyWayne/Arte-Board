@@ -192,25 +192,23 @@ function fsOpenRadar(){
   if(!LINE) return;
   openFullscreen(document.getElementById('compRadarTitle').textContent, body => {
     Object.assign(body.style, {alignItems:'center', justifyContent:'center'});
-    // Crée un SVG 2× plus grand pour la résolution
-    const fsW = Math.min(window.innerWidth - 80, 900);
-    const fsH = Math.min(window.innerHeight - 110, 790);
+    const fsW = Math.min(window.innerWidth - 80, 700);
+    const fsH = Math.min(window.innerHeight - 110, 650);
     const wrap = document.createElement('div');
     wrap.style.cssText = `width:${fsW}px;height:${fsH}px;`;
-    const svgFs = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svgFs.id = 'radarSvgFs';
-    // viewBox proportionnel 320×280 → 2× plus grand
-    svgFs.setAttribute('viewBox', '0 0 320 280');
-    svgFs.style.cssText = 'width:100%;height:100%;display:block;';
-    wrap.appendChild(svgFs);
+    const canvasFs = document.createElement('canvas');
+    canvasFs.style.cssText = 'display:block;width:100%;';
+    wrap.appendChild(canvasFs);
     body.appendChild(wrap);
-    // Re-render le radar dans ce SVG temporaire
-    const origId = document.getElementById('radarSvg').id;
-    document.getElementById('radarSvg').id = '_radarSvgHidden';
-    svgFs.id = 'radarSvg';
-    renderRadar(_lastRadarAll, _lastRadarFiltered);
-    svgFs.id = 'radarSvgFs';
-    document.getElementById('_radarSvgHidden').id = 'radarSvg';
+    requestAnimationFrame(() => {
+      const orig = document.getElementById('radarCanvas');
+      if (orig) orig.id = '_radarCanvas_bak';
+      canvasFs.id = 'radarCanvas';
+      renderRadar(_lastRadarAll, _lastRadarFiltered);
+      canvasFs.id = '_radarCanvasFs';
+      const bak = document.getElementById('_radarCanvas_bak');
+      if (bak) bak.id = 'radarCanvas';
+    });
   });
 }
 

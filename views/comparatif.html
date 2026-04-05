@@ -107,15 +107,21 @@
 
   <!-- ── Ligne 2 col 2 : Radar des indicateurs (1/4) ── -->
   <div class="chart-card comp-radar-card">
-    <div class="chart-card-header">
-      <div class="chart-card-title" id="compRadarTitle">Radar des indicateurs</div>
+  <div class="chart-card-header">
+    <div class="chart-card-title" id="compRadarTitle">Radar des indicateurs</div>
+    <div style="display:flex;gap:.25rem;align-items:center;">
+      <div class="col-picker-wrap">
+        <button class="col-picker-btn" onclick="toggleRadarAxePicker(event)">⚙ Axes ▾</button>
+        <div class="col-picker-dropdown" id="radarAxePickerDropdown"></div>
+      </div>
       <button class="fs-btn" onclick="fsOpenRadar()" title="Plein écran">⛶</button>
     </div>
-    <div id="radarScSelector" style="display:flex;flex-wrap:wrap;gap:.35rem;padding:.3rem .5rem .1rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;min-height:28px;"></div>
-    <div style="display:flex;align-items:center;justify-content:center;">
-      <svg id="radarSvg" viewBox="0 0 320 280" style="width:100%;max-width:340px;height:auto;"></svg>
-    </div>
   </div>
+  <div id="radarScSelector" style="display:flex;flex-wrap:wrap;gap:.35rem;padding:.3rem .5rem .1rem;border-bottom:1px solid var(--border);margin-bottom:.4rem;min-height:28px;"></div>
+  <div style="display:flex;align-items:center;justify-content:center;">
+    <canvas id="radarCanvas" style="display:block;width:100%;max-width:380px;"></canvas>
+  </div>
+</div>
 
   <!-- ── Lignes 2+3 col 3 : Carte du tracé (1/4, span 2 lignes) ── -->
   <div class="chart-card comp-map-card">
