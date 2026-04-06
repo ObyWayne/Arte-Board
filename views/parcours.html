@@ -1,28 +1,30 @@
-<!-- KPI BANNER — 8 colonnes × 2 lignes -->
+<!-- KPI BANNER — 7 colonnes × 2 lignes -->
   <div class="kpi-banner">
 
-    <!-- A1 : Temps aller -->
-    <div class="kpi-card kpi-A1" style="--kpi-color:var(--blue)">
-      <div class="kpi-label" id="kpiLabelTpsA">Tps aller</div>
-      <div class="kpi-value" id="kpiTpsA" style="font-size:2rem">—</div>
+    <!-- A1 : Flotte nécessaire -->
+    <div class="kpi-card kpi-A1" style="--kpi-color:var(--green)">
+      <div class="kpi-label" id="kpiLabelFlotte">Flotte<br>nécessaire</div>
+      <div class="kpi-value" id="kpiFlotte">—</div>
+      <div class="kpi-sub" id="kpiFlotteSub"></div>
+    </div>
+
+    <!-- B1 : Flotte totale -->
+    <div class="kpi-card kpi-B1" style="--kpi-color:var(--green)">
+      <div class="kpi-label" id="kpiLabelFlotteTot">Flotte<br>totale</div>
+      <div class="kpi-value" id="kpiFlotteTot">—</div>
+      <div class="kpi-sub" id="kpiFlotteTotSub"></div>
     </div>
 
     <!-- A2 : Vit. commerciale Aller -->
     <div class="kpi-card kpi-A2" style="--kpi-color:var(--blue)">
-      <div class="kpi-label" id="kpiLabelVitA">Vit. comm.<br>↓ Aller</div>
+      <div class="kpi-label" id="kpiLabelVitA">Comm. Speed<br>↓ Aller</div>
       <div class="kpi-value" id="kpiVitA">—</div>
       <div class="kpi-sub" id="kpiVitASub"></div>
     </div>
 
-    <!-- B1 : Temps retour -->
-    <div class="kpi-card kpi-B1" style="--kpi-color:var(--orange)">
-      <div class="kpi-label" id="kpiLabelTpsR">Tps retour</div>
-      <div class="kpi-value" id="kpiTpsR" style="font-size:2rem">—</div>
-    </div>
-
     <!-- B2 : Vit. commerciale Retour -->
     <div class="kpi-card kpi-B2" style="--kpi-color:var(--orange)">
-      <div class="kpi-label" id="kpiLabelVitR">Vit. comm.<br>↑ Retour</div>
+      <div class="kpi-label" id="kpiLabelVitR">Comm. Speed<br>↑ Retour</div>
       <div class="kpi-value" id="kpiVitR">—</div>
       <div class="kpi-sub" id="kpiVitRSub"></div>
     </div>
@@ -34,38 +36,28 @@
         <button class="fs-btn" onclick="toggleOccupPct()" id="occupPctBtn" title="Basculer %/mm:ss">%</button>
       </div>
       <div class="kpi-center">
-        <div class="kpi-value" id="kpiCycle" style="font-size:2rem">—</div>
+        <div class="kpi-value" id="kpiCycle" class="kpi-center">—</div>
+        <div class="kpi-sub" id="kpiCycleSub" class="kpi-sub kpi-center"></div>
       </div>
       <hr class="kpi-divider kpi-divider-flush">
       <div class="kpi-occup-row">
         <div class="kpi-occup-cell">
           <div class="kpi-label" id="kpiOccupALabel" class="kpi-occup-label"></div>
           <div class="kpi-value" id="kpiOccupA" class="kpi-occup-val">—</div>
+          <div class="kpi-sub" id="kpiOccupASub" class="kpi-sub kpi-center"></div>
         </div>
         <div class="kpi-occup-sep"></div>
         <div class="kpi-occup-cell">
           <div class="kpi-label" id="kpiOccupRLabel" class="kpi-occup-label"></div>
           <div class="kpi-value" id="kpiOccupR" class="kpi-occup-val">—</div>
+          <div class="kpi-sub" id="kpiOccupRSub" class="kpi-sub kpi-center"></div>
         </div>
       </div>
     </div>
 
-    <!-- D1 : Flotte nécessaire (narrow) -->
-    <div class="kpi-card kpi-D1" style="--kpi-color:var(--green)">
-      <div class="kpi-label" id="kpiLabelFlotte">Flotte<br>nécessaire</div>
-      <div class="kpi-value" id="kpiFlotte" style="font-size:2rem">—</div>
-      <div class="kpi-sub" id="kpiFlotteSub"></div>
-    </div>
-
-    <!-- D2 : Capacité SMR (narrow) -->
-    <div class="kpi-card kpi-D2" style="--kpi-color:var(--green)">
-      <div class="kpi-label" id="kpiLabelSMR">Capacité SMR</div>
-      <div class="kpi-value" id="kpiSMR">—</div>
-      <div class="kpi-sub" id="kpiSMRSub"></div>
-    </div>
-
-    <!-- E : Mouvements dépôt -->
-    <div class="kpi-card kpi-E" style="--kpi-color:var(--purple)">
+    <!-- D1 : Fréquence HP -->
+    <!-- D1 : Mouvements dépôt -->
+    <div class="kpi-card kpi-D1" style="--kpi-color:var(--purple)">
       <div class="kpi-label" id="kpiLabelDepot">Mouvements dépôt</div>
       <div class="kpi-depot-values">
         <span class="kpi-depot-lbl" id="kpiLabelSorties">↑ Sorties</span>
@@ -194,6 +186,7 @@
           </div>
         </div>
         <svg class="schema-svg" id="schemaSvg"></svg>
+        <div id="schemaLegend" class="schema-legend"></div>
       </div>
       <div class="table-col">
         <table>

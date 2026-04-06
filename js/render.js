@@ -476,10 +476,35 @@ function render(){
   // Voie unique si élément VU_DEBUT/VU_FIN dans SC_INFRA (par nom de station)
   const vuSections = SC_INFRA.filter(e=>e.type==='VU_DEBUT').map(e=>{
     let iD = scIdxByNom(e.stDeb), iF = scIdxByNom(e.stFin);
-    if(iD > iF){ const tmp=iD; iD=iF; iF=tmp; } // normalise
+    if(iD > iF){ const tmp=iD; iD=iF; iF=tmp; }
     return { iDeb:iD, iFin:iF };
   });
   const isVU = i => vuSections.some(s => i >= s.iDeb && i < s.iFin);
+
+  // Helper : permuté D↔G en retour (tous les éléments directionnels)
+  const coteEff = c => {
+    if(!isRetour) return (c||'D').toUpperCase();
+    return ((c||'D').toUpperCase()==='D') ? 'G' : 'D';
+  };
+
+  // Voie en site propre — types : VSP_D, VSP_G, VSP_DG / VSP, VSP_SU / VSP_SENS_UNIQUE
+  const _vspMap = { VSP_D:'D', VSP_G:'G', VSP_DG:'DG', VSP:'DG',
+                    VSP_SU:'SU', VSP_SENS_UNIQUE:'SU' };
+  const vspSections = SC_INFRA.filter(e=>_vspMap[e.type]).map(e=>{
+    let iD = scIdxByNom(e.stDeb), iF = scIdxByNom(e.stFin||e.stDeb);
+    if(iD < 0 || iF < 0) return null;
+    if(iD > iF){ const tmp=iD; iD=iF; iF=tmp; }
+    return { iDeb:iD, iFin:iF, side:_vspMap[e.type] };
+  }).filter(Boolean);
+
+  // Retourne le côté VSP pour le segment i (D/G/DG/SU ou null), avec flip retour
+  const getVspSide = i => {
+    const s = vspSections.find(s => i>=s.iDeb && i<s.iFin);
+    if(!s) return null;
+    if(s.side==='DG' || s.side==='SU') return s.side;
+    return isRetour ? (s.side==='D'?'G':'D') : s.side;
+  };
+  const VSP_COL = '#22c55e';
 
   for(let i=0; i<N_ALL-1; i++){
     const y1 = scStY(i), y2 = scStY(i+1);
@@ -494,8 +519,18 @@ function render(){
       const mid=(y1+y2)/2;
       h += `<polygon points="${SC_CX},${mid-5} ${SC_CX-3},${mid+2} ${SC_CX+3},${mid+2}" fill="#6040b0" opacity=".6"/>`;
     } else {
-      h += scLine(SC_CX-SC_VD, y1, SC_CX-SC_VD, y2, '#a06bff', 2);
-      h += scLine(SC_CX+SC_VD, y1, SC_CX+SC_VD, y2, '#a06bff', 2);
+      const vsp = getVspSide(i);
+      const colL = (vsp==='G'||vsp==='DG'||vsp==='SU') ? VSP_COL : '#a06bff';
+      const colR = (vsp==='D'||vsp==='DG'||vsp==='SU') ? VSP_COL : '#a06bff';
+      const wL   = (vsp==='G'||vsp==='DG'||vsp==='SU') ? 3.5 : 2;
+      const wR   = (vsp==='D'||vsp==='DG'||vsp==='SU') ? 3.5 : 2;
+      h += scLine(SC_CX-SC_VD, y1, SC_CX-SC_VD, y2, colL, wL);
+      h += scLine(SC_CX+SC_VD, y1, SC_CX+SC_VD, y2, colR, wR);
+      // Flèche sens unique au milieu du segment
+      if(vsp==='SU'){
+        const yM=(y1+y2)/2, aDir=isRetour?-1:1;
+        h += `<polygon points="${SC_CX},${yM+aDir*7} ${SC_CX-4},${yM-aDir*2} ${SC_CX+4},${yM-aDir*2}" fill="${VSP_COL}" opacity=".9"/>`;
+      }
     }
   }
   // Ligne retournement (sous le dernier terminus actif)
@@ -532,7 +567,7 @@ function render(){
       // ── AIGUILLE_S
       if(el.type==='AIGUILLE_S'){
         const y=elInterY(iDeb, el.pos||0.5);
-        const cD=el.cote==='D'?1:-1;
+        const cD=coteEff(el.cote)==='D'?1:-1;
         // xV = rail du côté déclaré (ex: cote:'D' → rail droit)
         const xV = SC_CX + cD*SC_VD;
         // La branche s'arrête exactement sur le rail opposé
@@ -587,7 +622,7 @@ function render(){
       // ── DEBRANCH_VD
       if(el.type==='DEBRANCH_VD'){
         const y=elInterY(iDeb, el.pos||0.5);
-        const cD=el.cote==='D'?1:-1;
+        const cD=coteEff(el.cote)==='D'?1:-1;
         // En retour, pointe ↔ talon s'inversent
         const sensEff = isRetour ? (el.sens==='pointe'?'talon':'pointe') : (el.sens||'pointe');
         const sign=sensEff==='pointe'?-1:1;
@@ -650,7 +685,7 @@ function render(){
       // ── P+R
       if(el.type==='PR'){
         const y=elInterY(iDeb, el.pos||0.5);
-        const cD=el.cote==='D'?1:-1; const xR=SC_CX+cD*SC_VD;
+        const cD=coteEff(el.cote)==='D'?1:-1; const xR=SC_CX+cD*SC_VD;
         const armL=16, xA=xR+cD*armL; const bW=24,bH=16,bX=cD>0?xA:xA-bW;
         h+=`<g class="sc-infra" title="${el.desc||'P+R'}">`;
         h+=scLine(xR,y,xA,y,'#f5a623',1.5);
@@ -662,7 +697,7 @@ function render(){
       // ── DEPOT
       if(el.type==='DEPOT'){
         const y=elInterY(iDeb, el.pos||0.5);
-        const cD=el.cote==='D'?1:-1; const xM=SC_CX+cD*SC_VD; const xD2=xM+cD*24;
+        const cD=coteEff(el.cote)==='D'?1:-1; const xM=SC_CX+cD*SC_VD; const xD2=xM+cD*24;
         h+=`<g class="sc-infra" title="${el.desc||'Dépôt'}">`;
         h+=scLine(xM,y,xD2,y,'#f5a623',1.8);
         h+=`<rect x="${xD2-(cD>0?0:12)}" y="${y-6}" width="12" height="12" rx="2" fill="rgba(245,166,35,.15)" stroke="#f5a623" stroke-width="1.5"/>`;
@@ -822,6 +857,156 @@ function render(){
   renderKPIs(currentSc);
   renderCharts(currentSc);
   updateMTImage();
+  renderSchemaLegend(SC_INFRA);
+}
+
+/* ═══════════════════════════════════════════════
+   LÉGENDE SCHÉMA DE LIGNE
+   Générée dynamiquement dans #schemaLegend
+═══════════════════════════════════════════════ */
+function renderSchemaLegend(infra){
+  const el = document.getElementById('schemaLegend');
+  if(!el) return;
+
+  infra = infra || [];
+  const has = t => Array.isArray(t)
+    ? infra.some(e => t.includes(e.type))
+    : infra.some(e => e.type === t);
+
+  const purple='#a06bff', green='#3ecf6a', orange='#f5a623',
+        red='#e8453c', blue='#6040b0', vspCol='#22c55e';
+  const ROW = 18;
+  let y = ROW/2;
+  const rows = [];
+
+  // addRow : construit le SVG à y courant, l'enregistre avec ry, avance y
+  const add = (svgFn, label) => {
+    rows.push({ svg: svgFn(y), ry: y, label });
+    y += ROW;
+  };
+
+  /* ── Éléments toujours présents ── */
+  add(ry =>
+    `<rect x="5" y="${ry-4}" width="20" height="8" rx="4" fill="${green}" stroke="${green}" stroke-width="1"/>` +
+    `<text x="7" y="${ry+1.5}" font-size="5.5px" font-family="'Barlow Condensed',sans-serif" font-weight="800" fill="#0e1018">AV</text>`,
+    isEN ? 'Terminal' : 'Terminus');
+
+  add(ry =>
+    `<rect x="5" y="${ry-4}" width="20" height="8" rx="4" fill="${purple}" stroke="${purple}" stroke-width="1"/>`,
+    isEN ? 'Stop (major)' : 'Station importante');
+
+  add(ry =>
+    `<rect x="5" y="${ry-4}" width="20" height="8" rx="4" fill="var(--bg)" stroke="${purple}" stroke-width="1.5"/>`,
+    isEN ? 'Stop' : 'Station');
+
+  add(ry =>
+    `<line x1="12" y1="${ry-6}" x2="12" y2="${ry+6}" stroke="${purple}" stroke-width="2"/>` +
+    `<line x1="18" y1="${ry-6}" x2="18" y2="${ry+6}" stroke="${purple}" stroke-width="2"/>`,
+    isEN ? 'Double track' : 'Voie double');
+
+  /* ── Éléments conditionnels ── */
+  if(infra.some(e=>e.type==='VU_DEBUT'))
+    add(ry =>
+      `<line x1="15" y1="${ry-6}" x2="15" y2="${ry+6}" stroke="${blue}" stroke-width="2" stroke-dasharray="5,3"/>` +
+      `<polygon points="15,${ry-4} 12,${ry+2} 18,${ry+2}" fill="${blue}" opacity=".6"/>`,
+      isEN ? 'Single track' : 'Voie unique');
+
+  if(has(['VSP_D','VSP_G']))
+    add(ry =>
+      `<line x1="12" y1="${ry-6}" x2="12" y2="${ry+6}" stroke="${purple}" stroke-width="2"/>` +
+      `<line x1="18" y1="${ry-6}" x2="18" y2="${ry+6}" stroke="${vspCol}" stroke-width="3.5"/>`,
+      isEN ? 'Dedicated lane (1 side)' : 'Site propre (1 côté)');
+
+  if(has(['VSP_DG','VSP']))
+    add(ry =>
+      `<line x1="12" y1="${ry-6}" x2="12" y2="${ry+6}" stroke="${vspCol}" stroke-width="3.5"/>` +
+      `<line x1="18" y1="${ry-6}" x2="18" y2="${ry+6}" stroke="${vspCol}" stroke-width="3.5"/>`,
+      isEN ? 'Dedicated lane (both)' : 'Site propre (2 côtés)');
+
+  if(has(['VSP_SU','VSP_SENS_UNIQUE']))
+    add(ry =>
+      `<line x1="12" y1="${ry-6}" x2="12" y2="${ry+6}" stroke="${vspCol}" stroke-width="3.5"/>` +
+      `<line x1="18" y1="${ry-6}" x2="18" y2="${ry+6}" stroke="${vspCol}" stroke-width="3.5"/>` +
+      `<polygon points="15,${ry+5} 11,${ry-1} 19,${ry-1}" fill="${vspCol}" opacity=".9"/>`,
+      isEN ? 'One-way (SP)' : 'Sens unique (SP)');
+
+  if(has('DEPOT'))
+    add(ry =>
+      `<line x1="15" y1="${ry}" x2="28" y2="${ry}" stroke="${orange}" stroke-width="1.8"/>` +
+      `<rect x="28" y="${ry-5}" width="10" height="10" rx="2" fill="rgba(245,166,35,.15)" stroke="${orange}" stroke-width="1.5"/>` +
+      `<text x="33" y="${ry+1.5}" font-size="5.5px" font-family="'Barlow Condensed',sans-serif" font-weight="700" fill="${orange}" text-anchor="middle">D</text>`,
+      isEN ? 'Depot' : 'Dépôt');
+
+  if(has('PR'))
+    add(ry =>
+      `<line x1="15" y1="${ry}" x2="22" y2="${ry}" stroke="${orange}" stroke-width="1.5"/>` +
+      `<circle cx="15" cy="${ry}" r="2.5" fill="${orange}"/>` +
+      `<rect x="22" y="${ry-5}" width="16" height="10" rx="2" fill="var(--bg2)" stroke="${orange}" stroke-width="1.5"/>` +
+      `<text x="30" y="${ry+1.5}" font-size="5.5px" font-family="'Barlow Condensed',sans-serif" font-weight="800" fill="${orange}" text-anchor="middle">P+R</text>`,
+      'P+R');
+
+  if(has('CARREFOUR'))
+    add(ry =>
+      `<polygon points="15,${ry-8} 22,${ry+3} 8,${ry+3}" fill="white" stroke="#e8453c" stroke-width="3" stroke-linejoin="round"/>` +
+      `<line x1="10" y1="${ry}" x2="20" y2="${ry}" stroke="#111" stroke-width="1.2"/>`,
+      isEN ? 'Intersection' : 'Carrefour');
+
+  if(has('DEBRANCH_VD'))
+    add(ry =>
+      `<path d="M 12 ${ry-6} C 12 ${ry+2} 30 ${ry+2} 30 ${ry+2}" fill="none" stroke="${purple}" stroke-width="2"/>` +
+      `<path d="M 18 ${ry-6} C 18 ${ry+4} 30 ${ry+4} 30 ${ry+4}" fill="none" stroke="${purple}" stroke-width="2"/>`,
+      isEN ? 'Branch (VD)' : 'Débranchement VD');
+
+  if(has('AIGUILLE_S'))
+    add(ry =>
+      `<line x1="10" y1="${ry-6}" x2="18" y2="${ry+4}" stroke="${purple}" stroke-width="2"/>` +
+      `<line x1="10" y1="${ry-4}" x2="10" y2="${ry-8}" stroke="${orange}" stroke-width="2.5"/>` +
+      `<circle cx="10" cy="${ry-4}" r="1.8" fill="${orange}"/>`,
+      isEN ? 'Switch' : 'Aiguillage simple');
+
+  if(has('TUNNEL'))
+    add(ry =>
+      `<line x1="12" y1="${ry-6}" x2="12" y2="${ry+6}" stroke="${purple}" stroke-width="1.5" stroke-dasharray="4,3"/>` +
+      `<line x1="18" y1="${ry-6}" x2="18" y2="${ry+6}" stroke="${purple}" stroke-width="1.5" stroke-dasharray="4,3"/>` +
+      `<path d="M 9 ${ry-6} Q 15 ${ry-2} 21 ${ry-6}" fill="none" stroke="#8890aa" stroke-width="1.5"/>` +
+      `<path d="M 9 ${ry+6} Q 15 ${ry+2} 21 ${ry+6}" fill="none" stroke="#8890aa" stroke-width="1.5"/>`,
+      isEN ? 'Tunnel' : 'Tunnel');
+
+  if(has(['PONT_DESSUS','PONT_DESSOUS']))
+    add(ry =>
+      `<polyline points="6,${ry-6} 9,${ry-3} 21,${ry-3} 24,${ry-6}" fill="none" stroke="#8890aa" stroke-width="1.5"/>` +
+      `<polyline points="6,${ry+6} 9,${ry+3} 21,${ry+3} 24,${ry+6}" fill="none" stroke="#8890aa" stroke-width="1.5"/>`,
+      isEN ? 'Bridge' : 'Pont');
+
+  if(LINE && LINE.scenarios && LINE.scenarios.some(s=>(s.type||'').toUpperCase()==='SP'))
+    add(ry =>
+      `<rect x="5" y="${ry-4}" width="20" height="8" rx="4" fill="${green}" stroke="${green}" stroke-width="1"/>` +
+      `<line x1="27" y1="${ry-7}" x2="27" y2="${ry+3}" stroke="${green}" stroke-width="1.5"/>` +
+      `<polygon points="27,${ry-7} 33,${ry-3} 27,${ry+1}" fill="${green}"/>`,
+      isEN ? 'Temporary terminal' : 'Terminus provisoire');
+
+  add(ry =>
+    `<circle cx="15" cy="${ry}" r="5" fill="rgba(160,107,255,.15)" stroke="${purple}" stroke-width="1.3"/>` +
+    `<path d="M 8 ${ry-4} Q 3 ${ry} 8 ${ry+4}" fill="none" stroke="${purple}" stroke-width="1.5" stroke-linecap="round"/>` +
+    `<polygon points="8,${ry+4} 12,${ry+1} 5,${ry+2}" fill="${purple}"/>`,
+    isEN ? 'Reversal' : 'Retournement');
+
+  if(LINE && LINE.scenarios && LINE.scenarios.some(s=>(s.type||'').toUpperCase()==='SP'))
+    add(ry =>
+      `<line x1="15" y1="${ry-6}" x2="15" y2="${ry+6}" stroke="${red}" stroke-width="2.5" stroke-dasharray="5,4"/>`,
+      isEN ? 'Closed section' : 'Section hors service');
+
+  /* ── Assemblage SVG ── */
+  const totalH = y + 4;
+  let svgOut = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 ${totalH}" width="200" height="${totalH}">`;
+  rows.forEach(r => {
+    svgOut += `<g>${r.svg}` +
+      `<text x="42" y="${r.ry}" font-size="7px" font-family="'Barlow Condensed',sans-serif"` +
+      ` font-weight="500" fill="var(--text2)" dominant-baseline="middle">${r.label}</text>` +
+      `</g>`;
+  });
+  svgOut += `</svg>`;
+  el.innerHTML = svgOut;
 }
 
 
