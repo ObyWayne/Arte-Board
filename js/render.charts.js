@@ -54,40 +54,133 @@ function renderCharts(scIdx){
     };
   }
 
-  function drawPie(svgEl, segs, total){
-    if(!svgEl) return {};
-    const cx=50,cy=50,r=47,inner=33;
-    let angle=-90, mStart=-90, mEnd=-90, paths='';
-    segs.forEach((s,i)=>{
-      const pct=s.v/total, a=pct*360;
-      if(i===0) mStart=angle;
-      const midA = (angle + a/2) * Math.PI/180;
-      const sr=angle*Math.PI/180, er=(angle+a)*Math.PI/180;
-      const x1=cx+r*Math.cos(sr),y1=cy+r*Math.sin(sr);
-      const x2=cx+r*Math.cos(er),y2=cy+r*Math.sin(er);
-      const ix1=cx+inner*Math.cos(sr),iy1=cy+inner*Math.sin(sr);
-      const ix2=cx+inner*Math.cos(er),iy2=cy+inner*Math.sin(er);
-      const lg=a>180?1:0;
-      const pctStr = Math.round(pct*100);
-      const icon = pieIcon(s.l);
-      // data attributes for JS hover
-      paths+=`<path class="pie-slice" d="M${ix1} ${iy1} L${x1} ${y1} A${r} ${r} 0 ${lg} 1 ${x2} ${y2} L${ix2} ${iy2} A${inner} ${inner} 0 ${lg} 0 ${ix1} ${iy1}Z"
-        fill="${s.c}" opacity=".9"
-        data-label="${s.l}" data-val="${fmtMin(s.v)}" data-pct="${pctStr}" data-col="${s.c}" data-icon="${icon}"
-        data-midx="${(cx + (r+inner)/2*Math.cos(midA)).toFixed(1)}" data-midy="${(cy + (r+inner)/2*Math.sin(midA)).toFixed(1)}"
-        style="cursor:pointer;transition:transform .15s;transform-origin:${cx}px ${cy}px;transform-box:fill-box;"
-        onmouseenter="pieSliceEnter(this,event)" onmouseleave="pieSliceLeave(this)"/>`;
-      if(i===0) mEnd=angle+a;
-      angle+=a;
+  /* ── Chronomètre Canvas : remplace le donut SVG ── */
+  function drawChrono(canvasEl, segs, total){
+    if(!canvasEl || !segs || total <= 0) return { mStart:-90, mEnd:-90 };
+
+    const dpr  = window.devicePixelRatio || 1;
+    const CSS  = canvasEl.offsetWidth || parseInt(canvasEl.style.width) || 120;
+    canvasEl.width  = Math.round(CSS * dpr);
+    canvasEl.height = Math.round(CSS * dpr);
+    canvasEl.style.width  = CSS + 'px';
+    canvasEl.style.height = CSS + 'px';
+
+    const ctx = canvasEl.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, CSS, CSS);
+
+    // ── Couleurs depuis body pour respecter dark/light ──
+    const cs    = getComputedStyle(document.body);
+    const cBg   = cs.getPropertyValue('--bg3').trim()   || '#252b3b';
+    const cBg2  = cs.getPropertyValue('--bg2').trim()   || '#1f2435';
+    const cBg4  = cs.getPropertyValue('--bg4').trim()   || '#2d3449';
+    const cBdr  = cs.getPropertyValue('--border').trim()|| '#323854';
+    const cTxt  = cs.getPropertyValue('--text').trim()  || '#e8eaf0';
+    const cT2   = cs.getPropertyValue('--text2').trim() || '#a0a8c0';
+    const cT3   = cs.getPropertyValue('--text3').trim() || '#6b748f';
+
+    const cx = CSS/2, cy = CSS/2;
+    const BEZEL = CSS/2 - 1;     // rayon extérieur du cadran
+    const R_OUT = BEZEL - 7;     // bord extérieur de la piste colorée
+    const R_IN  = R_OUT  - 18;   // bord intérieur (épaisseur piste = 18px)
+    const R_MID = (R_OUT + R_IN) / 2;
+
+    // ── Fond du cadran ──
+    ctx.beginPath(); ctx.arc(cx, cy, BEZEL, 0, Math.PI*2);
+    ctx.fillStyle = cBg; ctx.fill();
+    ctx.strokeStyle = cBdr; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // ── Face centrale ──
+    ctx.beginPath(); ctx.arc(cx, cy, R_IN - 3, 0, Math.PI*2);
+    ctx.fillStyle = cBg2; ctx.fill();
+
+    // ── Piste de fond (anneau gris) ──
+    ctx.beginPath(); ctx.arc(cx, cy, R_MID, 0, Math.PI*2);
+    ctx.lineWidth = R_OUT - R_IN; ctx.strokeStyle = cBg4;
+    ctx.lineCap = 'butt'; ctx.stroke();
+
+    // ── Arcs colorés par segment ──
+    let angle = -Math.PI / 2;   // départ en haut (12h)
+    const segAngles = [];
+    segs.forEach(s => {
+      if(s.v <= 0) return;
+      const sweep = (s.v / total) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R_MID, angle, angle + sweep);
+      ctx.lineWidth = R_OUT - R_IN;
+      ctx.strokeStyle = s.c;
+      ctx.globalAlpha = 0.92;
+      ctx.lineCap = 'butt';
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      segAngles.push({ startA: angle, endA: angle + sweep, s });
+      angle += sweep;
     });
-    const mm = Math.floor(total), ss = Math.round((total-mm)*60);
-    const line1 = `${mm}m`;
-    const line2 = ss>0 ? `${ss}s` : '';
-    const yOff = line2 ? -4 : 2;
-    paths+=`<text x="${cx}" y="${cy+yOff}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-size="13" font-weight="800" fill="var(--text)">${line1}</text>`;
-    if(line2) paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-size="10" font-weight="700" fill="var(--text3)">${line2}</text>`;
-    svgEl.innerHTML=paths;
-    return {mStart, mEnd};
+
+    // ── Séparateurs entre segments ──
+    segAngles.forEach(sa => {
+      ctx.beginPath();
+      ctx.moveTo(cx + (R_IN-1) * Math.cos(sa.startA), cy + (R_IN-1) * Math.sin(sa.startA));
+      ctx.lineTo(cx + (R_OUT+1)* Math.cos(sa.startA), cy + (R_OUT+1)* Math.sin(sa.startA));
+      ctx.strokeStyle = cBg2; ctx.lineWidth = 2.5; ctx.stroke();
+    });
+
+    // ── Graduations chronomètre ──
+    const totalMins = Math.ceil(total);
+    for(let m=0; m<=totalMins; m++){
+      const a = -Math.PI/2 + (m / total) * Math.PI * 2;
+      const isMaj = m % 5 === 0;
+      const t0 = R_OUT + 1, t1 = R_OUT + (isMaj ? 5 : 3);
+      ctx.beginPath();
+      ctx.moveTo(cx + t0*Math.cos(a), cy + t0*Math.sin(a));
+      ctx.lineTo(cx + t1*Math.cos(a), cy + t1*Math.sin(a));
+      ctx.strokeStyle = isMaj ? cT2 : cT3;
+      ctx.lineWidth   = isMaj ? 1.3 : 0.7;
+      ctx.stroke();
+      // Label toutes les 5 min (pas 0, pas extrémité)
+      if(isMaj && m > 0 && m < totalMins){
+        const lr = R_OUT + 7;
+        ctx.fillStyle = cT3;
+        ctx.font = `600 ${Math.max(5, CSS * 0.055)}px Barlow Condensed,sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(m + '\'', cx + lr*Math.cos(a), cy + lr*Math.sin(a));
+      }
+    }
+
+    // ── Affichage central ──
+    const mm = Math.floor(total);
+    const ss = Math.round((total - mm) * 60);
+    const szBig = Math.max(11, CSS * 0.145);
+    const szSm  = Math.max(9,  CSS * 0.1);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if(ss > 0){
+      ctx.fillStyle = cTxt;
+      ctx.font = `800 ${szBig}px Barlow Condensed,sans-serif`;
+      ctx.fillText(`${mm}m`, cx, cy - szBig * 0.42);
+      ctx.fillStyle = cT2;
+      ctx.font = `700 ${szSm}px Barlow Condensed,sans-serif`;
+      ctx.fillText(`${ss}s`, cx, cy + szSm * 0.55);
+    } else {
+      ctx.fillStyle = cTxt;
+      ctx.font = `800 ${szBig * 1.1}px Barlow Condensed,sans-serif`;
+      ctx.fillText(`${mm}m`, cx, cy);
+    }
+
+    // ── Stockage hover ──
+    canvasEl._chrono = { segs, total, segAngles, cx, cy, R_IN, R_OUT };
+
+    if(!canvasEl._chronoBound){
+      canvasEl.addEventListener('mousemove',  _chronoMouseMove);
+      canvasEl.addEventListener('mouseleave', _chronoMouseLeave);
+      canvasEl._chronoBound = true;
+    }
+
+    // Retourne mStart/mEnd en degrés (compatibilité drawConnector)
+    const first = segAngles[0];
+    return {
+      mStart: first ? first.startA * 180/Math.PI : -90,
+      mEnd:   first ? first.endA   * 180/Math.PI : -90,
+    };
   }
 
   function drawVbar(el, run, carref, total){
@@ -154,12 +247,12 @@ function renderCharts(scIdx){
     if(totalEl) totalEl.textContent=`Σ ${isEN?'Cycle':'Cycle'} = ${_cycleShowPct ? '100%' : fmtMin(cyc)}`;
   }
 
-  /* Helper : génère HTML pie simplifié (sans zoom) */
+  /* Helper : génère HTML chrono (canvas) simplifié */
   function renderBopPies(outId, inId, legendId, d, pieSize){
     return `<div class="bop-wrap" style="justify-content:center;gap:1rem;">
       <div class="bop-pie-col">
         <div class="bop-sens-label" style="color:var(--blue)">↓ ${T('dirOutbound')}</div>
-        <svg id="${outId}" width="${pieSize}" height="${pieSize}" viewBox="0 0 100 100"></svg>
+        <canvas id="${outId}" style="width:${pieSize}px;height:${pieSize}px;display:block;"></canvas>
       </div>
       <div class="bop-legend-center">
         <div class="bop-leg-header"><span style="color:var(--blue)">↓ ${isEN?'Out':'All.'}</span><span></span><span style="color:var(--orange)">↑ ${isEN?'In':'Ret.'}</span></div>
@@ -167,7 +260,7 @@ function renderCharts(scIdx){
       </div>
       <div class="bop-pie-col">
         <div class="bop-sens-label" style="color:var(--orange)">↑ ${T('dirInbound')}</div>
-        <svg id="${inId}" width="${pieSize}" height="${pieSize}" viewBox="0 0 100 100"></svg>
+        <canvas id="${inId}" style="width:${pieSize}px;height:${pieSize}px;display:block;"></canvas>
       </div>
     </div>`;
   }
@@ -201,7 +294,7 @@ function renderCharts(scIdx){
     requestAnimationFrame(()=>{
       [['bopA_PieA',dA.segsA,dA.totalA],['bopA_PieR',dA.segsR,dA.totalR],
        ['bopB_PieA',dB.segsA,dB.totalA],['bopB_PieR',dB.segsR,dB.totalR]].forEach(([id,segs,tot])=>{
-        drawPie(document.getElementById(id), segs, tot);
+        drawChrono(document.getElementById(id), segs, tot);
       });
       ['bopA','bopB'].forEach((pfx,i)=>{
         const dd=i===0?dA:dB;
@@ -265,8 +358,8 @@ function renderCharts(scIdx){
       ${renderBopPies('bopPieA','bopPieR','bopLegendCenter', d, 124)}`;
 
     requestAnimationFrame(()=>{
-      drawPie(document.getElementById('bopPieA'), d.segsA, d.totalA);
-      drawPie(document.getElementById('bopPieR'), d.segsR, d.totalR);
+      drawChrono(document.getElementById('bopPieA'), d.segsA, d.totalA);
+      drawChrono(document.getElementById('bopPieR'), d.segsR, d.totalR);
       const bopLeg = document.getElementById('bopLegendCenter');
       if(bopLeg){
         const names=[...new Set([...d.segsA.map(s=>s.l),...d.segsR.map(s=>s.l)])];
@@ -297,6 +390,47 @@ function renderCharts(scIdx){
   }
 }
 
+
+/* ── Handlers hover cadrans chronomètre (scope global) ── */
+function _chronoMouseMove(e){
+  const canvas=e.currentTarget, c=canvas._chrono;
+  if(!c) return;
+  const rect=canvas.getBoundingClientRect();
+  const px=(e.clientX-rect.left)*(canvas.offsetWidth/rect.width);
+  const py=(e.clientY-rect.top)*(canvas.offsetHeight/rect.height);
+  const dx=px-c.cx, dy=py-c.cy;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  const tt=document.getElementById("pieTooltip");
+  if(!tt) return;
+  if(dist<c.R_IN||dist>c.R_OUT){tt.style.display="none";return;}
+  const TWO_PI=Math.PI*2;
+  const normA=a=>((a+Math.PI/2)%TWO_PI+TWO_PI)%TWO_PI;
+  const mouseN=normA(Math.atan2(dy,dx));
+  const hit=c.segAngles.find(sa=>{
+    const s=normA(sa.startA),en=normA(sa.endA);
+    return en>=s?(mouseN>=s&&mouseN<en):(mouseN>=s||mouseN<en);
+  });
+  if(!hit){tt.style.display="none";return;}
+  const seg=hit.s;
+  tt.style.background=seg.c;
+  const icon=(typeof pieIcon==="function")?pieIcon(seg.l):"\u23F1";
+  document.getElementById("ptIcon").textContent=icon;
+  document.getElementById("ptLabel").textContent=seg.l;
+  const val=(typeof fmtMin==="function")?fmtMin(seg.v):seg.v.toFixed(1)+"m";
+  document.getElementById("ptVal").textContent=val;
+  document.getElementById("ptPct").textContent=Math.round(seg.v/c.total*100)+"%";
+  tt.style.display="block";
+  const W=tt.offsetWidth||160,H=tt.offsetHeight||70;
+  let x=e.clientX+14,y=e.clientY-H/2;
+  if(x+W>window.innerWidth-8)x=e.clientX-W-14;
+  if(y<8)y=8;
+  if(y+H>window.innerHeight-8)y=window.innerHeight-H-8;
+  tt.style.left=x+"px";tt.style.top=y+"px";
+}
+function _chronoMouseLeave(e){
+  const tt=document.getElementById("pieTooltip");
+  if(tt)tt.style.display="none";
+}
 
 function renderDepotKPI(k){
   const elS = document.getElementById('kpiDepotSorties');
