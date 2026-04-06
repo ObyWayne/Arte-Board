@@ -97,6 +97,15 @@ function _mtEnsureOverlay(){
     ov.appendChild(title);
     ov.appendChild(grp);
     card.appendChild(ov);
+
+    if(!card._mtRO){
+      let _mtROTimer = null;
+      card._mtRO = new ResizeObserver(() => {
+        clearTimeout(_mtROTimer);
+        _mtROTimer = setTimeout(() => renderMarcheType(), 80);
+      });
+      card._mtRO.observe(card);
+    }
   }
 
   // Mise à jour titre + direction
@@ -208,24 +217,29 @@ function _drawMTChart(canvas, data){
   const dT = tMax-tMin||1, dPK = pkMax-pkMin||1, dV2 = v2Max-v2Min||1;
 
   // ── Projections ──
-  let scX, scYL, scYR, xTicks, yLTicks, xFmt, yLFmt, xArr, yLArr, mainLabel;
+  // Axe Y gauche = V (km/h), axe Y droit = T ou PK selon la vue
+  let scX, scYL, scYR, xTicks, yLTicks, yRTicks, xFmt, yLFmt, yRFmt, xArr, yLArr, mainLabel;
   if(!worldView){
     scX   = pkv => ML + (pkv-pkMin)/dPK*PW;
-    scYL  = tv  => MT + PH - (tv-tMin)/dT*PH;
-    scYR  = vv  => MT + PH - (vv-v2Min)/dV2*PH;
+    scYL  = vv  => MT + PH - (vv-v2Min)/dV2*PH;   // V gauche
+    scYR  = tv  => MT + PH - (tv-tMin)/dT*PH;     // T droit
     xTicks  = _mtNiceTicks(pkMin, pkMax, Math.max(3,Math.round(PW/70)));
-    yLTicks = _mtTimeTicks(tMin, tMax, Math.max(3,Math.round(PH/35)));
+    yLTicks = _mtNiceTicks(v2Min, v2Max, Math.max(3,Math.round(PH/35)));
+    yRTicks = _mtTimeTicks(tMin, tMax, Math.max(3,Math.round(PH/35)));
     xFmt    = v => v.toFixed(v>=10?1:v>=1?2:3)+' km';
-    yLFmt   = v => _mtFmtSec(v);
+    yLFmt   = v => v+'';
+    yRFmt   = v => _mtFmtSec(v);
     xArr=pk; yLArr=t; mainLabel='T (mm:ss)';
   } else {
     scX   = tv  => ML + (tv-tMin)/dT*PW;
-    scYL  = pkv => MT + PH - (pkv-pkMin)/dPK*PH;
-    scYR  = vv  => MT + PH - (vv-v2Min)/dV2*PH;
+    scYL  = vv  => MT + PH - (vv-v2Min)/dV2*PH;    // V gauche
+    scYR  = pkv => MT + PH - (pkv-pkMin)/dPK*PH;   // PK droit
     xTicks  = _mtTimeTicks(tMin, tMax, Math.max(3,Math.round(PW/70)));
-    yLTicks = _mtNiceTicks(pkMin, pkMax, Math.max(3,Math.round(PH/35)));
+    yLTicks = _mtNiceTicks(v2Min, v2Max, Math.max(3,Math.round(PH/35)));
+    yRTicks = _mtNiceTicks(pkMin, pkMax, Math.max(3,Math.round(PH/35)));
     xFmt    = v => _mtFmtSec(v);
-    yLFmt   = v => v.toFixed(v>=10?1:v>=1?2:3);
+    yLFmt   = v => v+'';
+    yRFmt   = v => v.toFixed(v>=10?1:v>=1?2:3);
     xArr=t; yLArr=pk; mainLabel='PK (km)';
   }
   const v2Label = 'V (km/h)';
@@ -239,16 +253,16 @@ function _drawMTChart(canvas, data){
   xTicks.forEach(v=>{ const x=scX(v);  ctx.beginPath(); ctx.moveTo(x,MT); ctx.lineTo(x,MT+PH); ctx.stroke(); });
   ctx.restore();
 
-  // ── Courbe V2 ──
+  // ── Courbe V2 — axe gauche ──
   ctx.save(); ctx.strokeStyle=colPri; ctx.lineWidth=1.5; ctx.globalAlpha=0.60;
   ctx.beginPath();
-  xArr.forEach((xv,i)=>{ const x=scX(xv),y=scYR(v2[i]); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  xArr.forEach((xv,i)=>{ const x=scX(xv),y=scYL(v2[i]); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
   ctx.stroke(); ctx.restore();
 
-  // ── Courbe principale ──
+  // ── Courbe principale — axe droit ──
   ctx.save(); ctx.strokeStyle=colSeg; ctx.lineWidth=2.5;
   ctx.beginPath();
-  xArr.forEach((xv,i)=>{ const x=scX(xv),y=scYL(yLArr[i]); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  xArr.forEach((xv,i)=>{ const x=scX(xv),y=scYR(yLArr[i]); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
   ctx.stroke(); ctx.restore();
 
   // ── Cadre ──
@@ -258,21 +272,21 @@ function _drawMTChart(canvas, data){
   ctx.beginPath(); ctx.moveTo(ML,MT+PH); ctx.lineTo(ML+PW,MT+PH); ctx.stroke();
   ctx.restore();
 
-  // ── Labels Y gauche ──
-  ctx.save(); ctx.fillStyle=colSeg; ctx.font='500 8.5px Barlow Condensed,sans-serif';
+  // ── Labels Y gauche = V (km/h) ──
+  ctx.save(); ctx.fillStyle=colPri; ctx.font='500 8.5px Barlow Condensed,sans-serif';
   ctx.textAlign='right'; ctx.textBaseline='middle';
   yLTicks.forEach(v=>{ ctx.fillText(yLFmt(v), ML-5, scYL(v)); });
   ctx.translate(11, MT+PH/2); ctx.rotate(-Math.PI/2);
   ctx.textAlign='center'; ctx.font='600 8px Barlow Condensed,sans-serif'; ctx.globalAlpha=0.7;
-  ctx.fillText(mainLabel, 0, 0); ctx.restore();
+  ctx.fillText(v2Label, 0, 0); ctx.restore();
 
-  // ── Labels Y droit ──
-  ctx.save(); ctx.fillStyle=colPri; ctx.font='500 8.5px Barlow Condensed,sans-serif';
+  // ── Labels Y droit = T ou PK ──
+  ctx.save(); ctx.fillStyle=colSeg; ctx.font='500 8.5px Barlow Condensed,sans-serif';
   ctx.textAlign='left'; ctx.textBaseline='middle';
-  _mtNiceTicks(v2Min,v2Max,4).forEach(v=>{ if(v>=0) ctx.fillText(v+'', ML+PW+5, scYR(v)); });
+  yRTicks.forEach(v=>{ ctx.fillText(yRFmt(v), ML+PW+5, scYR(v)); });
   ctx.translate(W-10, MT+PH/2); ctx.rotate(Math.PI/2);
   ctx.textAlign='center'; ctx.font='600 8px Barlow Condensed,sans-serif'; ctx.globalAlpha=0.7;
-  ctx.fillText(v2Label, 0, 0); ctx.restore();
+  ctx.fillText(mainLabel, 0, 0); ctx.restore();
 
   // ── Labels X ──
   ctx.save(); ctx.fillStyle=colTxt; ctx.font='400 8.5px Barlow Condensed,sans-serif';

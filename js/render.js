@@ -97,7 +97,7 @@ function _selectSP(pill, idx) {
 // PLAGES declared in core.js
 
 const C_HP = () => BRAND.primaire1;  // violet — paramétrable via feuille COLOR
-const C_HS = () => getComputedStyle(document.documentElement).getPropertyValue('--bg4').trim() || '#2d3449';
+const C_HS = () => getComputedStyle(document.body).getPropertyValue('--bg4').trim() || '#2d3449';
 
 // Palette HC : lavande clair (bien distinct du violet vif HP)
 /* HC_PALETTE générée à partir de primaire1 — recalculée dans applyBrandColors() */
@@ -141,7 +141,7 @@ function drawClock(){
   const R=94, R_SEG=70, R_FACE=68, R_NUM=56;
   const R_TICK_OUT=68, R_TICK_MAJ=60, R_TICK_MIN=64;
 
-  const _css = getComputedStyle(document.documentElement);
+  const _css = getComputedStyle(document.body);
   const _bg   = _css.getPropertyValue('--bg').trim()   || '#181c28';
   const _bg3  = _css.getPropertyValue('--bg3').trim()  || '#252b3b';
   const _bdr2 = _css.getPropertyValue('--border2').trim() || '#3d4560';
@@ -160,7 +160,7 @@ function drawClock(){
     const op = p.type==='HS' ? '.25' : '.80';
     const col = plageColor(p);
     const freqLabel = p.freq ? ` · ${fmtFreq(p.freq)} min` : '';
-    const label = `${p.type === 'HP' ? (isEN?'Peak':'HP') : p.type === 'HC' ? (isEN?'Off-peak':'HC') : (isEN?'Out of service':'HS')}`;
+    const label = `${p.type === 'HP' ? (isEN?'Peak':'HP') : p.type === 'HC' ? (isEN?'Off-peak':'Heure creuse') : (isEN?'Out of service':'HS')}`;
     const hours = `${minToHM(p.debut)} – ${minToHM(p.fin)}`;
     const freqTxt = p.freq ? `${fmtFreq(p.freq)} min` : '—';
     html += `<path class="clock-slice" d="${arcPath(CX,CY,R_SEG,R-1,aS,aE)}"
@@ -227,7 +227,7 @@ function updateClockLegend(){
     const color = hcMap[f];
     return `<div class="clock-leg-item">
       <div class="clock-leg-dot" style="background:${color}"></div>
-      <span style="color:var(--text2)">HC · ${fmtFreq(f)} min</span>
+      <span style="color:var(--text2)">${isEN ? 'Off peak' : 'Heure creuse'} · ${fmtFreq(f)} min</span>
     </div>`;
   }).join('');
 }
