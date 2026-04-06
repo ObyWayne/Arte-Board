@@ -58,8 +58,8 @@ function renderCharts(scIdx){
   function drawChrono(canvasEl, segs, total){
     if(!canvasEl || !segs || total <= 0) return { mStart:-90, mEnd:-90 };
 
-    const dpr  = window.devicePixelRatio || 1;
-    const CSS  = canvasEl.offsetWidth || parseInt(canvasEl.style.width) || 120;
+    const dpr = window.devicePixelRatio || 1;
+    const CSS = canvasEl.offsetWidth || parseInt(canvasEl.style.width) || 120;
     canvasEl.width  = Math.round(CSS * dpr);
     canvasEl.height = Math.round(CSS * dpr);
     canvasEl.style.width  = CSS + 'px';
@@ -69,47 +69,97 @@ function renderCharts(scIdx){
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, CSS, CSS);
 
-    // ── Couleurs depuis body pour respecter dark/light ──
-    const cs    = getComputedStyle(document.body);
-    const cBg   = cs.getPropertyValue('--bg3').trim()   || '#252b3b';
-    const cBg2  = cs.getPropertyValue('--bg2').trim()   || '#1f2435';
-    const cBg4  = cs.getPropertyValue('--bg4').trim()   || '#2d3449';
-    const cBdr  = cs.getPropertyValue('--border').trim()|| '#323854';
-    const cTxt  = cs.getPropertyValue('--text').trim()  || '#e8eaf0';
-    const cT2   = cs.getPropertyValue('--text2').trim() || '#a0a8c0';
-    const cT3   = cs.getPropertyValue('--text3').trim() || '#6b748f';
+    // ── Couleurs ──
+    const cs   = getComputedStyle(document.body);
+    const cBg  = cs.getPropertyValue('--bg3').trim()   || '#252b3b';
+    const cBg2 = cs.getPropertyValue('--bg2').trim()   || '#1f2435';
+    const cBg4 = cs.getPropertyValue('--bg4').trim()   || '#2d3449';
+    const cBdr = cs.getPropertyValue('--border').trim()|| '#323854';
+    const cTxt = cs.getPropertyValue('--text').trim()  || '#e8eaf0';
+    const cT2  = cs.getPropertyValue('--text2').trim() || '#a0a8c0';
+    const cT3  = cs.getPropertyValue('--text3').trim() || '#6b748f';
 
-    const cx = CSS/2, cy = CSS/2;
-    const BEZEL = CSS/2 - 1;     // rayon extérieur du cadran
-    const R_OUT = BEZEL - 7;     // bord extérieur de la piste colorée
-    const R_IN  = R_OUT  - 18;   // bord intérieur (épaisseur piste = 18px)
+    const cx = CSS/2, cy = CSS/2 + CSS*0.03; // légèrement vers le bas (place pour la couronne)
+    const BEZEL = CSS/2 - 2;
+    const FACE  = BEZEL - 9;          // bord interne du bezel (zone ticks)
+    const R_OUT = FACE - 2;           // bord extérieur de la piste
+    const TRACK = Math.max(10, CSS * 0.13); // épaisseur de la piste
+    const R_IN  = R_OUT - TRACK;
     const R_MID = (R_OUT + R_IN) / 2;
 
-    // ── Fond du cadran ──
+    // Échelle : 60 min = 360°
+    const SCALE   = 60;
+    const START_A = -Math.PI / 2;          // 12h en haut
+    const totalSweep = Math.min((total / SCALE) * Math.PI * 2, Math.PI * 2);
+
+    // ── Couronne en haut (décorative) ──
+    const crownW = CSS * 0.10, crownH = CSS * 0.07;
+    ctx.fillStyle = cT3;
+    ctx.strokeStyle = cBg;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(cx - crownW/2, cy - BEZEL - crownH + 2, crownW, crownH);
+    ctx.fill(); ctx.stroke();
+    // Bouton poussoir rond sur la couronne
+    ctx.beginPath();
+    ctx.arc(cx, cy - BEZEL - crownH + 2 - CSS*0.025, CSS*0.028, 0, Math.PI*2);
+    ctx.fillStyle = cBdr; ctx.fill(); ctx.stroke();
+
+    // ── Bezel extérieur (dégradé métallique) ──
+    const bzGrad = ctx.createRadialGradient(cx - CSS*0.1, cy - CSS*0.1, FACE*0.3, cx, cy, BEZEL);
+    bzGrad.addColorStop(0, cBdr);
+    bzGrad.addColorStop(0.6, cT3);
+    bzGrad.addColorStop(1, cBg);
     ctx.beginPath(); ctx.arc(cx, cy, BEZEL, 0, Math.PI*2);
-    ctx.fillStyle = cBg; ctx.fill();
-    ctx.strokeStyle = cBdr; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = bzGrad; ctx.fill();
 
-    // ── Face centrale ──
-    ctx.beginPath(); ctx.arc(cx, cy, R_IN - 3, 0, Math.PI*2);
+    // ── Face du cadran ──
+    ctx.beginPath(); ctx.arc(cx, cy, FACE, 0, Math.PI*2);
     ctx.fillStyle = cBg2; ctx.fill();
+    ctx.strokeStyle = cBdr; ctx.lineWidth = 1; ctx.stroke();
 
-    // ── Piste de fond (anneau gris) ──
-    ctx.beginPath(); ctx.arc(cx, cy, R_MID, 0, Math.PI*2);
-    ctx.lineWidth = R_OUT - R_IN; ctx.strokeStyle = cBg4;
-    ctx.lineCap = 'butt'; ctx.stroke();
+    // ── Graduations sur le bezel (60 ticks = 60 min) ──
+    for(let m=0; m<60; m++){
+      const a = START_A + (m/60) * Math.PI * 2;
+      const isMaj5  = m%5  === 0;
+      const isMaj15 = m%15 === 0;
+      const t0 = FACE + 1;
+      const t1 = FACE + (isMaj5 ? (isMaj15 ? 7 : 5) : 3);
+      ctx.beginPath();
+      ctx.moveTo(cx + t0*Math.cos(a), cy + t0*Math.sin(a));
+      ctx.lineTo(cx + t1*Math.cos(a), cy + t1*Math.sin(a));
+      ctx.strokeStyle = isMaj5 ? cT2 : cT3;
+      ctx.lineWidth   = isMaj5 ? 1.4 : 0.7;
+      ctx.stroke();
+      // Labels 15, 30, 45 seulement
+      if(isMaj15 && m > 0){
+        const lr = FACE + 9;
+        ctx.fillStyle = cT2;
+        ctx.font = `700 ${Math.max(5.5, CSS*0.055)}px Barlow Condensed,sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(m, cx + lr*Math.cos(a), cy + lr*Math.sin(a));
+      }
+    }
 
-    // ── Arcs colorés par segment ──
-    let angle = -Math.PI / 2;   // départ en haut (12h)
+    // ── Piste de fond (arc complet gris) ──
+    ctx.beginPath();
+    ctx.arc(cx, cy, R_MID, 0, Math.PI*2);
+    ctx.lineWidth = TRACK;
+    ctx.strokeStyle = cBg4;
+    ctx.lineCap = 'butt';
+    ctx.stroke();
+
+    // ── Arcs colorés (ARC PARTIEL : 0 → totalSweep) ──
+    let angle = START_A;
     const segAngles = [];
     segs.forEach(s => {
       if(s.v <= 0) return;
-      const sweep = (s.v / total) * Math.PI * 2;
+      const sweep = (s.v / total) * totalSweep;
       ctx.beginPath();
       ctx.arc(cx, cy, R_MID, angle, angle + sweep);
-      ctx.lineWidth = R_OUT - R_IN;
+      ctx.lineWidth = TRACK;
       ctx.strokeStyle = s.c;
-      ctx.globalAlpha = 0.92;
+      ctx.globalAlpha = 0.93;
       ctx.lineCap = 'butt';
       ctx.stroke();
       ctx.globalAlpha = 1;
@@ -120,66 +170,42 @@ function renderCharts(scIdx){
     // ── Séparateurs entre segments ──
     segAngles.forEach(sa => {
       ctx.beginPath();
-      ctx.moveTo(cx + (R_IN-1) * Math.cos(sa.startA), cy + (R_IN-1) * Math.sin(sa.startA));
-      ctx.lineTo(cx + (R_OUT+1)* Math.cos(sa.startA), cy + (R_OUT+1)* Math.sin(sa.startA));
-      ctx.strokeStyle = cBg2; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.moveTo(cx + R_IN * Math.cos(sa.startA), cy + R_IN * Math.sin(sa.startA));
+      ctx.lineTo(cx + R_OUT * Math.cos(sa.startA), cy + R_OUT * Math.sin(sa.startA));
+      ctx.strokeStyle = cBg2; ctx.lineWidth = 2; ctx.stroke();
     });
 
-    // ── Graduations chronomètre ──
-    const totalMins = Math.ceil(total);
-    for(let m=0; m<=totalMins; m++){
-      const a = -Math.PI/2 + (m / total) * Math.PI * 2;
-      const isMaj = m % 5 === 0;
-      const t0 = R_OUT + 1, t1 = R_OUT + (isMaj ? 5 : 3);
-      ctx.beginPath();
-      ctx.moveTo(cx + t0*Math.cos(a), cy + t0*Math.sin(a));
-      ctx.lineTo(cx + t1*Math.cos(a), cy + t1*Math.sin(a));
-      ctx.strokeStyle = isMaj ? cT2 : cT3;
-      ctx.lineWidth   = isMaj ? 1.3 : 0.7;
-      ctx.stroke();
-      // Label toutes les 5 min (pas 0, pas extrémité)
-      if(isMaj && m > 0 && m < totalMins){
-        const lr = R_OUT + 7;
-        ctx.fillStyle = cT3;
-        ctx.font = `600 ${Math.max(5, CSS * 0.055)}px Barlow Condensed,sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(m + '\'', cx + lr*Math.cos(a), cy + lr*Math.sin(a));
-      }
-    }
+    // ── Point de départ (12h) ──
+    ctx.beginPath();
+    ctx.arc(cx, cy - R_MID, TRACK/2 - 1, 0, Math.PI*2);
+    ctx.fillStyle = cBdr; ctx.fill();
 
     // ── Affichage central ──
     const mm = Math.floor(total);
-    const ss = Math.round((total - mm) * 60);
-    const szBig = Math.max(11, CSS * 0.145);
-    const szSm  = Math.max(9,  CSS * 0.1);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if(ss > 0){
-      ctx.fillStyle = cTxt;
-      ctx.font = `800 ${szBig}px Barlow Condensed,sans-serif`;
-      ctx.fillText(`${mm}m`, cx, cy - szBig * 0.42);
-      ctx.fillStyle = cT2;
-      ctx.font = `700 ${szSm}px Barlow Condensed,sans-serif`;
-      ctx.fillText(`${ss}s`, cx, cy + szSm * 0.55);
-    } else {
-      ctx.fillStyle = cTxt;
-      ctx.font = `800 ${szBig * 1.1}px Barlow Condensed,sans-serif`;
-      ctx.fillText(`${mm}m`, cx, cy);
-    }
+    const szNum = Math.max(16, CSS * 0.265);
+    const szMin = Math.max(8,  CSS * 0.1);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    // Grand chiffre
+    ctx.fillStyle = cTxt;
+    ctx.font = `900 ${szNum}px Barlow Condensed,sans-serif`;
+    ctx.fillText(`${mm}`, cx, cy + szNum * 0.35);
+    // Libellé "min"
+    ctx.fillStyle = cT2;
+    ctx.font = `600 ${szMin}px Barlow Condensed,sans-serif`;
+    ctx.fillText('min', cx, cy + szNum * 0.35 + szMin * 1.25);
 
     // ── Stockage hover ──
     canvasEl._chrono = { segs, total, segAngles, cx, cy, R_IN, R_OUT };
-
     if(!canvasEl._chronoBound){
       canvasEl.addEventListener('mousemove',  _chronoMouseMove);
       canvasEl.addEventListener('mouseleave', _chronoMouseLeave);
       canvasEl._chronoBound = true;
     }
 
-    // Retourne mStart/mEnd en degrés (compatibilité drawConnector)
     const first = segAngles[0];
     return {
       mStart: first ? first.startA * 180/Math.PI : -90,
-      mEnd:   first ? first.endA   * 180/Math.PI : -90,
+      mEnd:   angle  * 180/Math.PI,
     };
   }
 
