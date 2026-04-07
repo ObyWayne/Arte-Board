@@ -51,6 +51,7 @@ function renderCharts(scIdx){
     return{mA,mR,dSA,dSR,aA,aR,carrA,carrR,mPureA,mPureR,
       totalA: mA+dSA+aA, totalR: mR+dSR+aR,
       segsA: filtA, segsR: filtR,
+      allSegsA: segsA, allSegsR: segsR,
     };
   }
 
@@ -209,6 +210,70 @@ function renderCharts(scIdx){
     };
   }
 
+  /* ── Mini-chronomètre : 1 segment, pas de ticks ── */
+  function drawMiniChrono(canvas, seg, total){
+    if(!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const CSS = canvas.offsetWidth || parseInt(canvas.style.width) || 58;
+    canvas.width  = Math.round(CSS * dpr);
+    canvas.height = Math.round(CSS * dpr);
+    canvas.style.width  = CSS + 'px';
+    canvas.style.height = CSS + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, CSS, CSS);
+
+    const cs   = getComputedStyle(document.body);
+    const cBg2 = cs.getPropertyValue('--bg2').trim() || '#1f2435';
+    const cBg4 = cs.getPropertyValue('--bg4').trim() || '#2d3449';
+    const cBdr = cs.getPropertyValue('--border').trim() || '#323854';
+    const cTxt = cs.getPropertyValue('--text').trim() || '#e8eaf0';
+    const cT3  = cs.getPropertyValue('--text3').trim() || '#6b748f';
+
+    const cx = CSS / 2, cy = CSS / 2;
+    const R_OUT = CSS * 0.44;
+    const TRACK = Math.max(5, CSS * 0.13);
+    const R_MID = R_OUT - TRACK / 2;
+
+    // Face du cadran
+    ctx.beginPath();
+    ctx.arc(cx, cy, R_OUT + 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = cBg2; ctx.fill();
+    ctx.strokeStyle = cBdr; ctx.lineWidth = 0.8; ctx.stroke();
+
+    // Piste fond grise
+    ctx.beginPath();
+    ctx.arc(cx, cy, R_MID, 0, Math.PI * 2);
+    ctx.lineWidth = TRACK;
+    ctx.strokeStyle = cBg4;
+    ctx.lineCap = 'butt';
+    ctx.stroke();
+
+    // Arc coloré proportionnel (seg.v / total)
+    const isZero = !seg || seg.v <= 0 || !total;
+    if(!isZero){
+      const sweep = Math.min((seg.v / total) * Math.PI * 2, Math.PI * 2);
+      ctx.beginPath();
+      ctx.arc(cx, cy, R_MID, -Math.PI / 2, -Math.PI / 2 + sweep);
+      ctx.lineWidth = TRACK;
+      ctx.strokeStyle = seg.c;
+      ctx.globalAlpha = 0.93;
+      ctx.lineCap = 'butt';
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Valeur centrale en mm:ss
+    const val = isZero ? '—' : fmtMmSs(seg.v);
+    const szV = Math.max(8, CSS * 0.21);
+    ctx.fillStyle = isZero ? cT3 : cTxt;
+    ctx.font = `800 ${szV}px Barlow Condensed,sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(val, cx, cy);
+  }
+
   function drawVbar(el, run, carref, total){
     if(!el) return;
     const pRun=(run/total*100).toFixed(1);
@@ -274,19 +339,33 @@ function renderCharts(scIdx){
   }
 
   /* Helper : génère HTML chrono (canvas) simplifié */
-  function renderBopPies(outId, inId, legendId, d, pieSize){
-    return `<div class="bop-wrap" style="justify-content:center;gap:1rem;">
-      <div class="bop-pie-col">
-        <div class="bop-sens-label" style="color:var(--blue)">↓ ${T('dirOutbound')}</div>
-        <canvas id="${outId}" style="width:${pieSize}px;height:${pieSize}px;display:block;"></canvas>
+  function renderBopPies(outId, inId, pieSize){
+    const MINI = 58;
+    const S = isEN
+      ? ['Run','Priority','Recovery','Dwell']
+      : ['Marche','Priorité','Détente','Arrêts'];
+    function miniCell(id, lbl){
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:.1rem;">`
+        +`<canvas id="${id}" style="width:${MINI}px;height:${MINI}px;display:block;"></canvas>`
+        +`<div style="font-size:.42rem;font-weight:700;color:var(--text3);text-align:center;`
+        +`letter-spacing:.04em;text-transform:uppercase;line-height:1.2">${lbl}</div></div>`;
+    }
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;">
+      <div style="display:flex;align-items:flex-end;justify-content:center;gap:1.5rem;">
+        <div class="bop-pie-col">
+          <div class="bop-sens-label" style="color:var(--blue)">↓ ${T('dirOutbound')}</div>
+          <canvas id="${outId}" style="width:${pieSize}px;height:${pieSize}px;display:block;"></canvas>
+        </div>
+        <div class="bop-pie-col">
+          <div class="bop-sens-label" style="color:var(--orange)">↑ ${T('dirInbound')}</div>
+          <canvas id="${inId}" style="width:${pieSize}px;height:${pieSize}px;display:block;"></canvas>
+        </div>
       </div>
-      <div class="bop-legend-center">
-        <div class="bop-leg-header"><span style="color:var(--blue)">↓ ${isEN?'Out':'All.'}</span><span></span><span style="color:var(--orange)">↑ ${isEN?'In':'Ret.'}</span></div>
-        <div id="${legendId}"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,${MINI}px);gap:.35rem;">
+        ${miniCell(outId+'_m0',S[0])}${miniCell(outId+'_m1',S[1])}${miniCell(inId+'_m0',S[0])}${miniCell(inId+'_m1',S[1])}
       </div>
-      <div class="bop-pie-col">
-        <div class="bop-sens-label" style="color:var(--orange)">↑ ${T('dirInbound')}</div>
-        <canvas id="${inId}" style="width:${pieSize}px;height:${pieSize}px;display:block;"></canvas>
+      <div style="display:grid;grid-template-columns:repeat(4,${MINI}px);gap:.35rem;">
+        ${miniCell(outId+'_m2',S[2])}${miniCell(outId+'_m3',S[3])}${miniCell(inId+'_m2',S[2])}${miniCell(inId+'_m3',S[3])}
       </div>
     </div>`;
   }
@@ -308,12 +387,12 @@ function renderCharts(scIdx){
       <div style="display:flex;flex-direction:column;gap:.75rem;">
         <div>
           <div style="font-size:.58rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">${trA.label}</div>
-          ${renderBopPies('bopA_PieA','bopA_PieR','bopA_Legend', dA, 100)}
+          ${renderBopPies('bopA_PieA','bopA_PieR', 100)}
         </div>
         <div style="height:1px;background:var(--border);margin:0 .5rem"></div>
         <div>
           <div style="font-size:.58rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">${trB.label}</div>
-          ${renderBopPies('bopB_PieA','bopB_PieR','bopB_Legend', dB, 100)}
+          ${renderBopPies('bopB_PieA','bopB_PieR', 100)}
         </div>
       </div>`;
 
@@ -322,19 +401,9 @@ function renderCharts(scIdx){
        ['bopB_PieA',dB.segsA,dB.totalA],['bopB_PieR',dB.segsR,dB.totalR]].forEach(([id,segs,tot])=>{
         drawChrono(document.getElementById(id), segs, tot);
       });
-      ['bopA','bopB'].forEach((pfx,i)=>{
-        const dd=i===0?dA:dB;
-        const leg=document.getElementById(pfx+'_Legend');
-        if(!leg) return;
-        // Fusion des noms des 2 sens pour la légende
-        const names=[...new Set([...dd.segsA.map(s=>s.l),...dd.segsR.map(s=>s.l)])];
-        leg.innerHTML=names.map(nm=>{
-          const sA=dd.segsA.find(s=>s.l===nm)||{v:0,c:'#444'};
-          const sR=dd.segsR.find(s=>s.l===nm)||{v:0,c:'#444'};
-          return `<div class="bop-leg-row"><span class="bop-leg-val-a">${fmtMin(sA.v)}</span>`
-            +`<div class="bop-leg-dot" style="background:${sA.c}"></div><span class="bop-leg-name">${nm}</span>`
-            +`<div class="bop-leg-dot" style="background:${sR.c}"></div><span class="bop-leg-val-r">${fmtMin(sR.v)}</span></div>`;
-        }).join('');
+      [['bopA_PieA',dA.allSegsA,dA.totalA],['bopA_PieR',dA.allSegsR,dA.totalR],
+       ['bopB_PieA',dB.allSegsA,dB.totalA],['bopB_PieR',dB.allSegsR,dB.totalR]].forEach(([pid,allSegs,tot])=>{
+        allSegs.forEach((seg,i)=>drawMiniChrono(document.getElementById(pid+'_m'+i), seg, tot));
       });
     });
 
@@ -381,22 +450,13 @@ function renderCharts(scIdx){
 
     bopCardEl.innerHTML=`
       <div class="chart-card-title">${T('chartBopTitle')}</div>
-      ${renderBopPies('bopPieA','bopPieR','bopLegendCenter', d, 124)}`;
+      ${renderBopPies('bopPieA','bopPieR', 134)}`;
 
     requestAnimationFrame(()=>{
       drawChrono(document.getElementById('bopPieA'), d.segsA, d.totalA);
       drawChrono(document.getElementById('bopPieR'), d.segsR, d.totalR);
-      const bopLeg = document.getElementById('bopLegendCenter');
-      if(bopLeg){
-        const names=[...new Set([...d.segsA.map(s=>s.l),...d.segsR.map(s=>s.l)])];
-        bopLeg.innerHTML=names.map(nm=>{
-          const sA=d.segsA.find(s=>s.l===nm)||{v:0,c:'#444'};
-          const sR=d.segsR.find(s=>s.l===nm)||{v:0,c:'#444'};
-          return `<div class="bop-leg-row"><span class="bop-leg-val-a">${fmtMin(sA.v)}</span>`
-            +`<div class="bop-leg-dot" style="background:${sA.c}"></div><span class="bop-leg-name">${nm}</span>`
-            +`<div class="bop-leg-dot" style="background:${sR.c}"></div><span class="bop-leg-val-r">${fmtMin(sR.v)}</span></div>`;
-        }).join('');
-      }
+      d.allSegsA.forEach((seg,i)=>drawMiniChrono(document.getElementById('bopPieA_m'+i), seg, d.totalA));
+      d.allSegsR.forEach((seg,i)=>drawMiniChrono(document.getElementById('bopPieR_m'+i), seg, d.totalR));
     });
 
     cycleCardEl.innerHTML=`
