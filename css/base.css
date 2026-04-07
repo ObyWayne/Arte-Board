@@ -440,7 +440,7 @@ body.light-mode{--bg:#e8eaed;--bg2:#dfe1e6;--bg3:#d4d7dd;--bg4:#c8ccd4;--border:
 /* LAYOUT TABLE */
 .layout{display:flex;align-items:flex-start;gap:0;background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
 .schema-col{flex-shrink:0;width:clamp(160px,14vw,240px);border-right:1px solid var(--border);}
-.schema-legend{padding:.4rem .3rem .5rem;border-top:1px solid var(--border);background:var(--bg2);overflow:hidden;}
+.schema-legend{padding:.35rem .6rem;border-top:1px solid var(--border);background:var(--bg2);overflow:hidden;}
 .schema-legend svg{display:block;width:100%;height:auto;overflow:visible;}
 svg.schema-svg{display:block;width:100%;overflow:visible;}
 .schema-fs-btn{position:sticky;top:4px;left:50%;transform:translateX(-50%);z-index:10;}
