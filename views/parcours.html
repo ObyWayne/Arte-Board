@@ -179,46 +179,48 @@
       </div>
     </div>
 
-    <!-- RIGHT PANEL : schema + table -->
-    <div class="layout">
-      <div class="schema-col">
-        <div class="schema-dir-btns">
-          <button class="fs-btn schema-fs-btn-top" onclick="fsOpenSchema()" title="Plein écran">⛶</button>
-          <div class="schema-dir-stack">
-            <button class="dir-btn dir-btn-aller active" id="dirBtnA" onclick="setDirection('aller')">
-              <span id="dirLabelA">↓ Aller</span>
-            </button>
-            <button class="dir-btn dir-btn-retour" id="dirBtnR" onclick="setDirection('retour')">
-              <span id="dirLabelR">↑ Retour</span>
-            </button>
+    <!-- RIGHT PANEL : schema + table + légende -->
+    <div class="right-panel">
+      <div class="layout">
+        <div class="schema-col">
+          <div class="schema-dir-btns">
+            <button class="fs-btn schema-fs-btn-top" onclick="fsOpenSchema()" title="Plein écran">⛶</button>
+            <div class="schema-dir-stack">
+              <button class="dir-btn dir-btn-aller active" id="dirBtnA" onclick="setDirection('aller')">
+                <span id="dirLabelA">↓ Aller</span>
+              </button>
+              <button class="dir-btn dir-btn-retour" id="dirBtnR" onclick="setDirection('retour')">
+                <span id="dirLabelR">↑ Retour</span>
+              </button>
+            </div>
           </div>
+          <svg class="schema-svg" id="schemaSvg"></svg>
         </div>
-        <svg class="schema-svg" id="schemaSvg"></svg>
+        <div class="table-col">
+          <table>
+            <thead>
+              <tr class="th-top">
+                <th rowspan="2" style="text-align:center;min-width:140px">
+                  <span id="thStop">Station</span>
+                </th>
+                <th colspan="2" id="thDistances">Distances</th>
+                <th colspan="2" id="thRuntime">Temps de parcours</th>
+                <th rowspan="2" id="thDwell">Arrêt<br><span style="font-size:.5rem;color:var(--text3)">(mm:ss)</span></th>
+                <th rowspan="2" id="thArrival">Arrivée<br><span style="font-size:.5rem;color:var(--text3)">(mm:ss)</span></th>
+                <th rowspan="2" id="thDeparture">Départ<br><span style="font-size:.5rem;color:var(--text3)">(mm:ss)</span></th>
+              </tr>
+              <tr class="th-bot">
+                <th id="thSpacing">Interstation<br>(m)</th>
+                <th id="thCumul">Cumulée<br>(km)</th>
+                <th id="thRunTendu">Marche<br>tendue</th>
+                <th id="thRecovery">Détente<br>10%</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="table-col">
-        <table>
-          <thead>
-            <tr class="th-top">
-              <th rowspan="2" style="text-align:center;min-width:140px">
-                <span id="thStop">Station</span>
-              </th>
-              <th colspan="2" id="thDistances">Distances</th>
-              <th colspan="2" id="thRuntime">Temps de parcours</th>
-              <th rowspan="2" id="thDwell">Arrêt<br><span style="font-size:.5rem;color:var(--text3)">(mm:ss)</span></th>
-              <th rowspan="2" id="thArrival">Arrivée<br><span style="font-size:.5rem;color:var(--text3)">(mm:ss)</span></th>
-              <th rowspan="2" id="thDeparture">Départ<br><span style="font-size:.5rem;color:var(--text3)">(mm:ss)</span></th>
-            </tr>
-            <tr class="th-bot">
-              <th id="thSpacing">Interstation<br>(m)</th>
-              <th id="thCumul">Cumulée<br>(km)</th>
-              <th id="thRunTendu">Marche<br>tendue</th>
-              <th id="thRecovery">Détente<br>10%</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
+      <!-- Légende schéma — pleine largeur de la colonne droite uniquement -->
+      <div id="schemaLegend" class="schema-legend"></div>
     </div>
   </div>
-  <!-- Légende schéma de ligne — pleine largeur sous l'ensemble schéma + tableau -->
-  <div id="schemaLegend" class="schema-legend"></div>

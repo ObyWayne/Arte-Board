@@ -882,129 +882,129 @@ function renderSchemaLegend(infra){
   const purple='#a06bff', green='#3ecf6a', orange='#f5a623',
         red='#e8453c', blue='#6040b0', vspCol='#22c55e';
 
-  // Chaque item : icône SVG (viewBox 0 0 32 16) + libellé
-  const ICW = 32, ICH = 16, cy = ICH/2;
+  // Chaque item : icône SVG (viewBox 0 0 24 12) + libellé
+  const ICW = 24, ICH = 12, cy = ICH/2;
   const items = [];
   const add = (svgContent, label) => items.push({ svgContent, label });
 
   /* ── Toujours présents ── */
   add(
-    `<rect x="3" y="${cy-4}" width="16" height="8" rx="4" fill="${green}" stroke="${green}" stroke-width="1"/>` +
-    `<text x="5" y="${cy+1.5}" font-size="5.5px" font-family="'Barlow Condensed',sans-serif" font-weight="800" fill="#0e1018">AV</text>`,
+    `<rect x="2" y="${cy-3}" width="14" height="6" rx="3" fill="${green}" stroke="${green}" stroke-width="1"/>` +
+    `<text x="3.5" y="${cy+1}" font-size="4.5px" font-family="'Barlow Condensed',sans-serif" font-weight="800" fill="#0e1018">AV</text>`,
     isEN ? 'Terminal' : 'Terminus');
 
   add(
-    `<rect x="3" y="${cy-4}" width="16" height="8" rx="4" fill="${purple}" stroke="${purple}" stroke-width="1"/>`,
+    `<rect x="2" y="${cy-3}" width="14" height="6" rx="3" fill="${purple}" stroke="${purple}" stroke-width="1"/>`,
     isEN ? 'Stop (major)' : 'Stn. importante');
 
   add(
-    `<rect x="3" y="${cy-4}" width="16" height="8" rx="4" fill="var(--bg)" stroke="${purple}" stroke-width="1.5"/>`,
+    `<rect x="2" y="${cy-3}" width="14" height="6" rx="3" fill="var(--bg)" stroke="${purple}" stroke-width="1.2"/>`,
     isEN ? 'Stop' : 'Station');
 
   add(
-    `<line x1="10" y1="${cy-6}" x2="10" y2="${cy+6}" stroke="${purple}" stroke-width="2"/>` +
-    `<line x1="16" y1="${cy-6}" x2="16" y2="${cy+6}" stroke="${purple}" stroke-width="2"/>`,
+    `<line x1="8"  y1="${cy-5}" x2="8"  y2="${cy+5}" stroke="${purple}" stroke-width="1.8"/>` +
+    `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${purple}" stroke-width="1.8"/>`,
     isEN ? 'Double track' : 'Voie double');
 
   add(
-    `<circle cx="13" cy="${cy}" r="5" fill="rgba(160,107,255,.15)" stroke="${purple}" stroke-width="1.3"/>` +
-    `<path d="M 7 ${cy-3} Q 3 ${cy} 7 ${cy+3}" fill="none" stroke="${purple}" stroke-width="1.5" stroke-linecap="round"/>` +
-    `<polygon points="7,${cy+3} 11,${cy+1} 5,${cy+1}" fill="${purple}"/>`,
+    `<circle cx="10" cy="${cy}" r="4" fill="rgba(160,107,255,.15)" stroke="${purple}" stroke-width="1.2"/>` +
+    `<path d="M 6 ${cy-2} Q 3 ${cy} 6 ${cy+2}" fill="none" stroke="${purple}" stroke-width="1.4" stroke-linecap="round"/>` +
+    `<polygon points="6,${cy+2} 9,${cy+1} 4.5,${cy+1}" fill="${purple}"/>`,
     isEN ? 'Reversal' : 'Retournement');
 
   /* ── Conditionnels ── */
   if(infra.some(e=>e.type==='VU_DEBUT'))
     add(
-      `<line x1="13" y1="${cy-6}" x2="13" y2="${cy+6}" stroke="${blue}" stroke-width="2" stroke-dasharray="5,3"/>` +
-      `<polygon points="13,${cy-4} 10,${cy+2} 16,${cy+2}" fill="${blue}" opacity=".6"/>`,
+      `<line x1="10" y1="${cy-5}" x2="10" y2="${cy+5}" stroke="${blue}" stroke-width="1.8" stroke-dasharray="4,2.5"/>` +
+      `<polygon points="10,${cy-3} 7.5,${cy+2} 12.5,${cy+2}" fill="${blue}" opacity=".7"/>`,
       isEN ? 'Single track' : 'Voie unique');
 
   if(has(['VSP_D','VSP_G']))
     add(
-      `<line x1="10" y1="${cy-6}" x2="10" y2="${cy+6}" stroke="${purple}" stroke-width="2"/>` +
-      `<line x1="16" y1="${cy-6}" x2="16" y2="${cy+6}" stroke="${vspCol}" stroke-width="3.5"/>`,
-      isEN ? 'Ded. lane (1 side)' : 'Site propre (1 côté)');
+      `<line x1="8"  y1="${cy-5}" x2="8"  y2="${cy+5}" stroke="${purple}" stroke-width="1.8"/>` +
+      `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>`,
+      isEN ? 'Ded. lane (1 side)' : 'SP (1 côté)');
 
   if(has(['VSP_DG','VSP']))
     add(
-      `<line x1="10" y1="${cy-6}" x2="10" y2="${cy+6}" stroke="${vspCol}" stroke-width="3.5"/>` +
-      `<line x1="16" y1="${cy-6}" x2="16" y2="${cy+6}" stroke="${vspCol}" stroke-width="3.5"/>`,
-      isEN ? 'Ded. lane (both)' : 'Site propre (2 côtés)');
+      `<line x1="8"  y1="${cy-5}" x2="8"  y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>` +
+      `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>`,
+      isEN ? 'Ded. lane (both)' : 'SP (2 côtés)');
 
   if(has(['VSP_SU','VSP_SENS_UNIQUE']))
     add(
-      `<line x1="10" y1="${cy-6}" x2="10" y2="${cy+6}" stroke="${vspCol}" stroke-width="3.5"/>` +
-      `<line x1="16" y1="${cy-6}" x2="16" y2="${cy+6}" stroke="${vspCol}" stroke-width="3.5"/>` +
-      `<polygon points="13,${cy+5} 9,${cy-1} 17,${cy-1}" fill="${vspCol}" opacity=".9"/>`,
-      isEN ? 'One-way (SP)' : 'Sens unique (SP)');
+      `<line x1="8"  y1="${cy-5}" x2="8"  y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>` +
+      `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>` +
+      `<polygon points="10.5,${cy+4} 7.5,${cy} 13.5,${cy}" fill="${vspCol}" opacity=".9"/>`,
+      isEN ? 'One-way (SP)' : 'Sens unique SP');
 
   if(has('DEPOT'))
     add(
-      `<line x1="3" y1="${cy}" x2="14" y2="${cy}" stroke="${orange}" stroke-width="1.8"/>` +
-      `<rect x="14" y="${cy-5}" width="10" height="10" rx="2" fill="rgba(245,166,35,.15)" stroke="${orange}" stroke-width="1.5"/>` +
-      `<text x="19" y="${cy+1.5}" font-size="5.5px" font-family="'Barlow Condensed',sans-serif" font-weight="700" fill="${orange}" text-anchor="middle">D</text>`,
+      `<line x1="2" y1="${cy}" x2="10" y2="${cy}" stroke="${orange}" stroke-width="1.5"/>` +
+      `<rect x="10" y="${cy-3.5}" width="9" height="7" rx="1.5" fill="rgba(245,166,35,.15)" stroke="${orange}" stroke-width="1.2"/>` +
+      `<text x="14.5" y="${cy+1}" font-size="4.5px" font-family="'Barlow Condensed',sans-serif" font-weight="700" fill="${orange}" text-anchor="middle">D</text>`,
       isEN ? 'Depot' : 'Dépôt');
 
   if(has('PR'))
     add(
-      `<line x1="3" y1="${cy}" x2="10" y2="${cy}" stroke="${orange}" stroke-width="1.5"/>` +
-      `<circle cx="3" cy="${cy}" r="2.5" fill="${orange}"/>` +
-      `<rect x="10" y="${cy-5}" width="16" height="10" rx="2" fill="var(--bg2)" stroke="${orange}" stroke-width="1.5"/>` +
-      `<text x="18" y="${cy+1.5}" font-size="5.5px" font-family="'Barlow Condensed',sans-serif" font-weight="800" fill="${orange}" text-anchor="middle">P+R</text>`,
+      `<line x1="2" y1="${cy}" x2="8" y2="${cy}" stroke="${orange}" stroke-width="1.2"/>` +
+      `<circle cx="2" cy="${cy}" r="2" fill="${orange}"/>` +
+      `<rect x="8" y="${cy-3.5}" width="13" height="7" rx="1.5" fill="var(--bg2)" stroke="${orange}" stroke-width="1.2"/>` +
+      `<text x="14.5" y="${cy+1}" font-size="4.5px" font-family="'Barlow Condensed',sans-serif" font-weight="800" fill="${orange}" text-anchor="middle">P+R</text>`,
       'P+R');
 
   if(has('CARREFOUR'))
     add(
-      `<polygon points="13,${cy-7} 20,${cy+4} 6,${cy+4}" fill="white" stroke="#e8453c" stroke-width="2.5" stroke-linejoin="round"/>` +
-      `<line x1="8" y1="${cy}" x2="18" y2="${cy}" stroke="#111" stroke-width="1.1"/>`,
+      `<polygon points="10,${cy-5} 17,${cy+4} 3,${cy+4}" fill="white" stroke="#e8453c" stroke-width="2" stroke-linejoin="round"/>` +
+      `<line x1="5" y1="${cy+1}" x2="15" y2="${cy+1}" stroke="#111" stroke-width="1"/>`,
       isEN ? 'Intersection' : 'Carrefour');
 
   if(has('DEBRANCH_VD'))
     add(
-      `<path d="M 10 ${cy-6} C 10 ${cy+2} 26 ${cy+2} 26 ${cy+2}" fill="none" stroke="${purple}" stroke-width="1.8"/>` +
-      `<path d="M 16 ${cy-6} C 16 ${cy+4} 26 ${cy+4} 26 ${cy+4}" fill="none" stroke="${purple}" stroke-width="1.8"/>`,
+      `<path d="M 8 ${cy-5} C 8 ${cy+1} 21 ${cy+1} 21 ${cy+1}" fill="none" stroke="${purple}" stroke-width="1.5"/>` +
+      `<path d="M 13 ${cy-5} C 13 ${cy+3} 21 ${cy+3} 21 ${cy+3}" fill="none" stroke="${purple}" stroke-width="1.5"/>`,
       isEN ? 'Branch (VD)' : 'Débranchement VD');
 
   if(has('AIGUILLE_S'))
     add(
-      `<line x1="8" y1="${cy-6}" x2="18" y2="${cy+4}" stroke="${purple}" stroke-width="2"/>` +
-      `<line x1="8" y1="${cy-4}" x2="8" y2="${cy-8}" stroke="${orange}" stroke-width="2.5"/>` +
-      `<circle cx="8" cy="${cy-4}" r="1.8" fill="${orange}"/>`,
-      isEN ? 'Switch' : 'Aiguillage simple');
+      `<line x1="6" y1="${cy-4}" x2="15" y2="${cy+4}" stroke="${purple}" stroke-width="1.8"/>` +
+      `<line x1="6" y1="${cy-3}" x2="6" y2="${cy-6}" stroke="${orange}" stroke-width="2"/>` +
+      `<circle cx="6" cy="${cy-3}" r="1.5" fill="${orange}"/>`,
+      isEN ? 'Switch' : 'Aiguillage');
 
   if(has('TUNNEL'))
     add(
-      `<line x1="10" y1="${cy-6}" x2="10" y2="${cy+6}" stroke="${purple}" stroke-width="1.5" stroke-dasharray="4,3"/>` +
-      `<line x1="16" y1="${cy-6}" x2="16" y2="${cy+6}" stroke="${purple}" stroke-width="1.5" stroke-dasharray="4,3"/>` +
-      `<path d="M 7 ${cy-6} Q 13 ${cy-2} 19 ${cy-6}" fill="none" stroke="#8890aa" stroke-width="1.5"/>` +
-      `<path d="M 7 ${cy+6} Q 13 ${cy+2} 19 ${cy+6}" fill="none" stroke="#8890aa" stroke-width="1.5"/>`,
+      `<line x1="8"  y1="${cy-5}" x2="8"  y2="${cy+5}" stroke="${purple}" stroke-width="1.3" stroke-dasharray="3,2.5"/>` +
+      `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${purple}" stroke-width="1.3" stroke-dasharray="3,2.5"/>` +
+      `<path d="M 5 ${cy-5} Q 10.5 ${cy-2} 16 ${cy-5}" fill="none" stroke="#8890aa" stroke-width="1.2"/>` +
+      `<path d="M 5 ${cy+5} Q 10.5 ${cy+2} 16 ${cy+5}" fill="none" stroke="#8890aa" stroke-width="1.2"/>`,
       isEN ? 'Tunnel' : 'Tunnel');
 
   if(has(['PONT_DESSUS','PONT_DESSOUS']))
     add(
-      `<polyline points="4,${cy-6} 7,${cy-3} 19,${cy-3} 22,${cy-6}" fill="none" stroke="#8890aa" stroke-width="1.5"/>` +
-      `<polyline points="4,${cy+6} 7,${cy+3} 19,${cy+3} 22,${cy+6}" fill="none" stroke="#8890aa" stroke-width="1.5"/>`,
+      `<polyline points="2,${cy-5} 5,${cy-2} 16,${cy-2} 19,${cy-5}" fill="none" stroke="#8890aa" stroke-width="1.2"/>` +
+      `<polyline points="2,${cy+5} 5,${cy+2} 16,${cy+2} 19,${cy+5}" fill="none" stroke="#8890aa" stroke-width="1.2"/>`,
       isEN ? 'Bridge' : 'Pont');
 
   if(LINE && LINE.scenarios && LINE.scenarios.some(s=>(s.type||'').toUpperCase()==='SP')){
     add(
-      `<rect x="3" y="${cy-4}" width="16" height="8" rx="4" fill="${green}" stroke="${green}" stroke-width="1"/>` +
-      `<line x1="21" y1="${cy-7}" x2="21" y2="${cy+3}" stroke="${green}" stroke-width="1.5"/>` +
-      `<polygon points="21,${cy-7} 27,${cy-3} 21,${cy+1}" fill="${green}"/>`,
-      isEN ? 'Temp. terminal' : 'Terminus provisoire');
+      `<rect x="2" y="${cy-3}" width="14" height="6" rx="3" fill="${green}" stroke="${green}" stroke-width="1"/>` +
+      `<line x1="18" y1="${cy-5}" x2="18" y2="${cy+2}" stroke="${green}" stroke-width="1.2"/>` +
+      `<polygon points="18,${cy-5} 22,${cy-2} 18,${cy+1}" fill="${green}"/>`,
+      isEN ? 'Temp. terminal' : 'Terminus prov.');
     add(
-      `<line x1="13" y1="${cy-6}" x2="13" y2="${cy+6}" stroke="${red}" stroke-width="2.5" stroke-dasharray="5,4"/>`,
-      isEN ? 'Closed section' : 'Section hors service');
+      `<line x1="10" y1="${cy-5}" x2="10" y2="${cy+5}" stroke="${red}" stroke-width="2" stroke-dasharray="4,3"/>`,
+      isEN ? 'Closed section' : 'Hors service');
   }
 
   /* ── Rendu HTML flex-wrap ── */
-  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:.15rem .6rem;align-items:center;">` +
+  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:.1rem .4rem;align-items:center;">` +
     items.map(it =>
-      `<div style="display:flex;align-items:center;gap:.25rem;flex-shrink:0;">` +
+      `<div style="display:flex;align-items:center;gap:.2rem;flex-shrink:0;">` +
         `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ICW} ${ICH}" width="${ICW}" height="${ICH}" style="flex-shrink:0;overflow:visible;">` +
           it.svgContent +
         `</svg>` +
-        `<span style="font-size:.52rem;font-family:'Barlow Condensed',sans-serif;font-weight:500;color:var(--text2);white-space:nowrap;">${it.label}</span>` +
+        `<span style="font-size:.46rem;font-family:'Barlow Condensed',sans-serif;font-weight:500;color:var(--text2);white-space:nowrap;">${it.label}</span>` +
       `</div>`
     ).join('') +
   `</div>`;
