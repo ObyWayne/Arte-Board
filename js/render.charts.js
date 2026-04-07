@@ -376,6 +376,192 @@ function renderCharts(scIdx){
     </div>`;
   }
 
+  /* ── Diagramme de cycle : bandes horizontales avec coudes ── */
+  function drawCycleDiagram(canvas, tA, cRA, tR, cRR, termA, termR){
+    if(!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W   = Math.max(180, canvas.offsetWidth || parseInt(canvas.style.width) || 340);
+    const H   = canvas.offsetHeight || parseInt(canvas.style.height) || 145;
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
+
+    const cs = getComputedStyle(document.body);
+    const g  = v => cs.getPropertyValue(v).trim();
+    const cBg2=g('--bg2')||'#1f2435', cBg4=g('--bg4')||'#2d3449';
+    const cBdr=g('--border')||'#323854', cTxt=g('--text')||'#e8eaf0';
+    const cT2=g('--text2')||'#a0a8c0', cT3=g('--text3')||'#6b748f';
+    const C_A=BRAND.aller, C_TA=shadeColor(BRAND.aller,-26);
+    const C_R=BRAND.retour, C_TR=shadeColor(BRAND.retour,-26);
+
+    const cyc = tA + cRA + tR + cRR;
+    if(cyc <= 0) return;
+
+    // ── Layout ──
+    const sz    = Math.max(7.5, W * 0.024);
+    const CONN  = Math.max(12, H * 0.095);
+    const PAD_L = 10;
+    const TIP_W = Math.max(22, H * 0.17);
+    const PAD_R = TIP_W + sz * 3.8 + 8;
+    const PTOP  = sz * 2.3 + CONN + 3;
+    const PBOT  = sz * 2.3 + CONN + sz * 1.3 + 8;
+    const drawW = W - PAD_L - PAD_R;
+    const drawH = Math.max(24, H - PTOP - PBOT);
+
+    // ── Band heights proportional, minimum 5px ──
+    const MIN_B = 5;
+    const raws  = [tA, cRA, tR, cRR].map(v => Math.max(MIN_B, (v/cyc)*drawH));
+    const scH   = drawH / raws.reduce((a,b)=>a+b,0);
+    const [hA, hTA, hR, hTR] = raws.map(h => h * scH);
+
+    // ── Y coordinates (top-down: termA, aller, retour, termR)
+    //    Le plus récent rejoint le bord le plus proche ──
+    const yTA0 = PTOP;            // terminus aller  ← topmost (le plus récent du groupe)
+    const yTA1 = yTA0 + hTA;     // aller
+    const yA1  = yTA1 + hA;      // retour
+    const yR1  = yA1  + hR;      // terminus retour
+    const yTR1 = yR1  + hTR;
+    const connTopY = yTA0 - CONN;
+    const connBotY = yTR1 + CONN;
+
+    // ── X coordinates ──
+    const scX  = drawW / cyc;
+    const x0   = PAD_L;
+    const xEnd = PAD_L + drawW;
+    const xA   = PAD_L + tA * scX;
+    const xRA  = PAD_L + (tA + cRA) * scX;
+    const xR   = PAD_L + (tA + cRA + tR) * scX;
+
+    // ── Draw helpers ──
+    function drawAllerBand(){
+      const r = Math.min(hA * 0.42, 12);
+      ctx.beginPath();
+      ctx.moveTo(x0, yTA1 + r);
+      ctx.quadraticCurveTo(x0, yTA1, x0 + r, yTA1);
+      ctx.lineTo(xEnd, yTA1); ctx.lineTo(xEnd, yA1);
+      ctx.lineTo(x0 + r, yA1);
+      ctx.quadraticCurveTo(x0, yA1, x0, yA1 - r);
+      ctx.closePath();
+      ctx.fillStyle = C_A; ctx.globalAlpha = 0.9; ctx.fill(); ctx.globalAlpha = 1;
+    }
+
+    // Connector entering from above at xc, transitioning to band at yt..yb going right
+    function connTop(xc, yt, yb, col){
+      const bh = yb - yt, xl = xc - bh/2, xr2 = xc + bh/2;
+      const r  = Math.min(bh * 0.4, 8);
+      ctx.fillStyle = col; ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(xl, connTopY);
+      ctx.lineTo(xr2, connTopY);
+      ctx.lineTo(xr2, yt + r);
+      ctx.quadraticCurveTo(xr2, yt, xr2 + r, yt);
+      ctx.lineTo(xEnd, yt); ctx.lineTo(xEnd, yb);
+      ctx.lineTo(xl + r, yb);
+      ctx.quadraticCurveTo(xl, yb, xl, yb - r);
+      ctx.lineTo(xl, connTopY);
+      ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+    }
+
+    // Connector entering from below at xc, transitioning to band at yt..yb going right
+    function connBot(xc, yt, yb, col){
+      const bh = yb - yt, xl = xc - bh/2, xr2 = xc + bh/2;
+      const r  = Math.min(bh * 0.4, 8);
+      ctx.fillStyle = col; ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(xl, connBotY);
+      ctx.lineTo(xr2, connBotY);
+      ctx.lineTo(xr2, yb - r);
+      ctx.quadraticCurveTo(xr2, yb, xr2 + r, yb);
+      ctx.lineTo(xEnd, yb); ctx.lineTo(xEnd, yt);
+      ctx.lineTo(xl + r, yt);
+      ctx.quadraticCurveTo(xl, yt, xl, yt + r);
+      ctx.lineTo(xl, connBotY);
+      ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+    }
+
+    // ── Render bands ──
+    drawAllerBand();                              // aller = 2e rang (sous terminus aller)
+    connTop(xA,  yTA0, yTA1, C_TA);              // terminus aller = rang 1 (le plus en haut)
+    connBot(xRA, yA1,  yR1,  C_R);              // retour = 3e rang
+    connBot(xR,  yR1,  yTR1, C_TR);             // terminus retour = rang 4 (le plus en bas)
+
+    // ── Arrow tip ──
+    const tipX = xEnd + TIP_W, tipY = (yTA0 + yTR1) / 2;
+    ctx.beginPath();
+    ctx.moveTo(xEnd, yTA0 - 1); ctx.lineTo(tipX, tipY); ctx.lineTo(xEnd, yTR1 + 1);
+    ctx.closePath(); ctx.fillStyle = cTxt; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
+
+    // ── Total time — centré sur tipY ──
+    const mm2 = Math.floor(cyc), ss2 = Math.round((cyc - mm2) * 60);
+    const szT = Math.max(8.5, sz * 1.0);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = cTxt; ctx.font = `800 ${szT}px Barlow Condensed,sans-serif`;
+    ctx.fillText(`${mm2}min`, tipX + 5, tipY - szT * 0.52);
+    ctx.fillStyle = cT2; ctx.font = `600 ${szT * 0.87}px Barlow Condensed,sans-serif`;
+    ctx.fillText(`${ss2}s`, tipX + 5, tipY + szT * 0.52);
+
+    // ── Axis ──
+    const axisY = Math.round(connBotY + sz * 2.4 + 6);
+    ctx.beginPath(); ctx.moveTo(x0, axisY); ctx.lineTo(xEnd + 8, axisY);
+    ctx.strokeStyle = cT3; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(xEnd+8, axisY-3); ctx.lineTo(xEnd+14, axisY); ctx.lineTo(xEnd+8, axisY+3);
+    ctx.strokeStyle = cT3; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.fillStyle = cT3; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `500 ${sz * 0.82}px Barlow Condensed,sans-serif`;
+    ctx.fillText(isEN ? 'Time' : 'min', xEnd + 18, axisY);
+    // Ticks
+    const step = cyc<=20?5:cyc<=60?10:cyc<=120?20:30;
+    ctx.textAlign = 'center'; ctx.fillStyle = cT3;
+    for(let t=0; t<=Math.ceil(cyc)+step/2; t+=step){
+      const tx = PAD_L + t * scX;
+      if(tx > xEnd + 4) break;
+      ctx.beginPath(); ctx.moveTo(tx, axisY); ctx.lineTo(tx, axisY+3);
+      ctx.strokeStyle = cT3; ctx.lineWidth = 0.7; ctx.stroke();
+      ctx.fillText(String(t), tx, axisY + 3 + sz * 0.5);
+    }
+
+    // ── Labels above ──
+    const szL = sz, szV = sz * 0.84;
+    const trunc = (s,n) => s&&s.length>n ? s.slice(0,n)+'…' : (s||'—');
+    function lblAbove(x, name, val, col, align){
+      ctx.textAlign = align||'center'; ctx.textBaseline = 'bottom';
+      ctx.fillStyle = col; ctx.font = `700 ${szL}px Barlow Condensed,sans-serif`;
+      ctx.fillText(name, x, connTopY - 2);
+      ctx.fillStyle = cT2; ctx.font = `600 ${szV}px Barlow Condensed,sans-serif`;
+      ctx.fillText(val, x, connTopY - 2 - szL - 1);
+    }
+    function lblBelow(x, name, val, col){
+      const top = connBotY + 2;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillStyle = col; ctx.font = `700 ${szL}px Barlow Condensed,sans-serif`;
+      ctx.fillText(name, x, top);
+      ctx.fillStyle = cT2; ctx.font = `600 ${szV}px Barlow Condensed,sans-serif`;
+      ctx.fillText(val, x, top + szL + 1);
+    }
+    lblAbove(x0+4, isEN?'↓ Outbound':'↓ Aller',  fmtMmSs(0),               C_A,  'left');
+    lblAbove(xA,   trunc(termR||(isEN?'End term.':'Term. aller'),14),  fmtMmSs(tA),              C_TA);
+    lblBelow(xRA,  isEN?'↑ Inbound':'↑ Retour',  fmtMmSs(tA + cRA),        C_R);
+    lblBelow(xR,   trunc(termA||(isEN?'Start term.':'Term. retour'),14), fmtMmSs(tA + cRA + tR),  C_TR);
+
+    // ── Hover ──
+    const SEGS = [
+      {l:isEN?'Outbound':'Aller',                                        v:tA,  c:C_A,  icon:'↓', x0:x0,  x1:xEnd, y0:yTA1, y1:yA1  },
+      {l:trunc(termR||(isEN?'End term.':'Term. aller'),28),               v:cRA, c:C_TA, icon:'🔁', x0:xA,  x1:xEnd, y0:yTA0, y1:yTA1 },
+      {l:isEN?'Inbound':'Retour',                                        v:tR,  c:C_R,  icon:'↑', x0:xRA, x1:xEnd, y0:yA1,  y1:yR1  },
+      {l:trunc(termA||(isEN?'Start term.':'Term. retour'),28),            v:cRR, c:C_TR, icon:'🔂', x0:xR,  x1:xEnd, y0:yR1,  y1:yTR1 },
+    ];
+    const TIP_BOX = { x0:xEnd, x1:tipX+6, y0:yTA0-2, y1:yTR1+2 };
+    canvas._cycleDiag = { SEGS, cyc, TIP_BOX, cBg4, cTxt };
+    if(!canvas._cdBound){
+      canvas.addEventListener('mousemove',  _cycleDiagMouseMove);
+      canvas.addEventListener('mouseleave', _cycleDiagMouseLeave);
+      canvas._cdBound = true;
+    }
+  }
+
   /* ── Reconstruit le HTML des blocs charts selon le mode SP ── */
   const bopCardEl   = document.getElementById('bopCard');
   const cycleCardEl = document.getElementById('cycleCard');
@@ -414,27 +600,35 @@ function renderCharts(scIdx){
     });
 
     cycleCardEl.innerHTML=`
-      <div class="chart-card-header">
-        <div class="chart-card-title">${T('chartCycleTitle')}</div>
-        <button class="fs-btn" onclick="toggleCyclePct()" id="cyclePctBtn" title="Basculer %/mm:ss">%</button>
-      </div>
+      <div class="chart-card-title">${T('chartCycleTitle')}</div>
       <div style="display:flex;flex-direction:column;gap:.75rem;">
         <div>
           <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">${trA.label}</div>
-          <div class="stack-wrap"><div class="stack-bar-row" id="stackBarA"></div><div class="stack-labels" id="stackLabelsA"></div><div class="stack-total" id="stackTotalA"></div></div>
+          <canvas id="cycleDiagA" style="width:100%;height:130px;display:block;"></canvas>
         </div>
         <div style="height:1px;background:var(--border);margin:0 .5rem"></div>
         <div>
           <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">${trB.label}</div>
-          <div class="stack-wrap"><div class="stack-bar-row" id="stackBarB"></div><div class="stack-labels" id="stackLabelsB"></div><div class="stack-total" id="stackTotalB"></div></div>
+          <canvas id="cycleDiagB" style="width:100%;height:130px;display:block;"></canvas>
         </div>
       </div>`;
     requestAnimationFrame(()=>{
-      const trs = getTerminusForSc(currentSc).troncons||[];
-      const trA_ret = trs[0]||{retA:null,retR:null};
-      const trB_ret = trs[1]||{retA:null,retR:null};
-      renderStackCycle(document.getElementById('stackBarA'),document.getElementById('stackLabelsA'),document.getElementById('stackTotalA'),dA.mA,dA.mR,dA.dSA,dA.dSR,dA.aA,dA.aR, trA_ret.retA, trA_ret.retR);
-      renderStackCycle(document.getElementById('stackBarB'),document.getElementById('stackLabelsB'),document.getElementById('stackTotalB'),dB.mA,dB.mR,dB.dSA,dB.dSR,dB.aA,dB.aR, trB_ret.retA, trB_ret.retR);
+      const trs     = getTerminusForSc(currentSc).troncons||[];
+      const trA_ret = trs[0]||{};
+      const trB_ret = trs[1]||{};
+      const def     = {totalSec:420};
+      drawCycleDiagram(
+        document.getElementById('cycleDiagA'),
+        dA.mA+dA.dSA+dA.aA, ((trA_ret.retA)||def).totalSec/60,
+        dA.mR+dA.dSR+dA.aR, ((trA_ret.retR)||def).totalSec/60,
+        trA_ret.termA, trA_ret.termR
+      );
+      drawCycleDiagram(
+        document.getElementById('cycleDiagB'),
+        dB.mA+dB.dSA+dB.aA, ((trB_ret.retA)||def).totalSec/60,
+        dB.mR+dB.dSR+dB.aR, ((trB_ret.retR)||def).totalSec/60,
+        trB_ret.termA, trB_ret.termR
+      );
     });
 
   } else {
@@ -466,18 +660,17 @@ function renderCharts(scIdx){
     });
 
     cycleCardEl.innerHTML=`
-      <div class="chart-card-header">
-        <div class="chart-card-title">${T('chartCycleTitle')}</div>
-        <button class="fs-btn" onclick="toggleCyclePct()" id="cyclePctBtn" title="Basculer %/mm:ss">%</button>
-      </div>
-      <div class="stack-wrap">
-        <div class="stack-bar-row" id="stackBar"></div>
-        <div class="stack-labels" id="stackLabels"></div>
-        <div class="stack-total" id="stackTotal"></div>
-      </div>`;
+      <div class="chart-card-title">${T('chartCycleTitle')}</div>
+      <canvas id="cycleDiag" style="width:100%;height:145px;display:block;margin-top:.3rem;"></canvas>`;
     requestAnimationFrame(()=>{
-      const {retA, retR} = getTerminusForSc(currentSc);
-      renderStackCycle(document.getElementById('stackBar'),document.getElementById('stackLabels'),document.getElementById('stackTotal'),d.mA,d.mR,d.dSA,d.dSR,d.aA,d.aR, retA, retR);
+      const {termA, termR, retA, retR} = getTerminusForSc(currentSc);
+      const def = {totalSec:420};
+      drawCycleDiagram(
+        document.getElementById('cycleDiag'),
+        d.mA+d.dSA+d.aA, ((retA)||def).totalSec/60,
+        d.mR+d.dSR+d.aR, ((retR)||def).totalSec/60,
+        termA, termR
+      );
     });
   }
 }
@@ -522,6 +715,56 @@ function _chronoMouseMove(e){
 function _chronoMouseLeave(e){
   const tt=document.getElementById("pieTooltip");
   if(tt)tt.style.display="none";
+}
+
+/* ── Handlers hover diagramme de cycle ── */
+function _cycleDiagMouseMove(e){
+  const canvas=e.currentTarget, c=canvas._cycleDiag;
+  if(!c) return;
+  const rect=canvas.getBoundingClientRect();
+  const px=(e.clientX-rect.left)*(canvas.offsetWidth/rect.width);
+  const py=(e.clientY-rect.top)*(canvas.offsetHeight/rect.height);
+  const tt=document.getElementById('pieTooltip');
+  if(!tt) return;
+
+  // ── Hover sur la pointe : affiche le cycle total ──
+  if(c.TIP_BOX && px>=c.TIP_BOX.x0 && px<=c.TIP_BOX.x1 && py>=c.TIP_BOX.y0 && py<=c.TIP_BOX.y1){
+    canvas.style.cursor='pointer';
+    tt.style.background = c.cBg4||'#2d3449';
+    document.getElementById('ptIcon').textContent='🔄';
+    document.getElementById('ptLabel').textContent=isEN?'Total cycle':'Cycle total';
+    document.getElementById('ptVal').textContent=fmtHhMmSs(c.cyc);
+    document.getElementById('ptPct').textContent='100%';
+    tt.style.display='block';
+    const W2=tt.offsetWidth||160,H2=tt.offsetHeight||70;
+    let x=e.clientX+14,y=e.clientY-H2/2;
+    if(x+W2>window.innerWidth-8)x=e.clientX-W2-14;
+    if(y<8)y=8;
+    if(y+H2>window.innerHeight-8)y=window.innerHeight-H2-8;
+    tt.style.left=x+'px';tt.style.top=y+'px';
+    return;
+  }
+
+  const hit=c.SEGS.find(s=>px>=s.x0&&px<=s.x1&&py>=s.y0&&py<=s.y1);
+  if(!hit){tt.style.display='none';canvas.style.cursor='default';return;}
+  canvas.style.cursor='pointer';
+  tt.style.background=hit.c;
+  document.getElementById('ptIcon').textContent=hit.icon;
+  document.getElementById('ptLabel').textContent=hit.l;
+  document.getElementById('ptVal').textContent=fmtMmSs(hit.v);
+  document.getElementById('ptPct').textContent=Math.round(hit.v/c.cyc*100)+'%';
+  tt.style.display='block';
+  const W2=tt.offsetWidth||160,H2=tt.offsetHeight||70;
+  let x=e.clientX+14,y=e.clientY-H2/2;
+  if(x+W2>window.innerWidth-8)x=e.clientX-W2-14;
+  if(y<8)y=8;
+  if(y+H2>window.innerHeight-8)y=window.innerHeight-H2-8;
+  tt.style.left=x+'px';tt.style.top=y+'px';
+}
+function _cycleDiagMouseLeave(e){
+  const tt=document.getElementById('pieTooltip');
+  if(tt)tt.style.display='none';
+  e.currentTarget.style.cursor='default';
 }
 
 function renderDepotKPI(k){
