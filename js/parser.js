@@ -29,10 +29,107 @@ function secToStr(s){const mn=Math.floor(s/60),ss=s%60;return `${String(mn).padS
 
 
 /* ═══════════════════════════════════════════════
-   IMPORT XLSX / ZIP
+   IMPORT — ZIP uniquement (2 slots)
 ═══════════════════════════════════════════════ */
-function openImport(){document.getElementById('importOverlay').classList.add('show');}
-function closeImport(){document.getElementById('importOverlay').classList.remove('show');document.getElementById('importStatus').textContent='';}
+function openImport(){
+  document.getElementById('importOverlay').classList.add('show');
+}
+function closeImport(){
+  document.getElementById('importOverlay').classList.remove('show');
+  _importReset('main');
+  _importReset('ref');
+}
+
+/* ── Helpers progression ── */
+function _importReset(slot){
+  const isRef = slot === 'ref';
+  const progWrap = document.getElementById(isRef ? 'importProg2' : 'importProg1');
+  const barFill  = document.getElementById(isRef ? 'importBar2Fill' : 'importBar1Fill');
+  const status   = document.getElementById(isRef ? 'importStatusRef' : 'importStatus');
+  if(progWrap) progWrap.style.display = 'none';
+  if(barFill)  barFill.style.width = '0%';
+  if(status)   status.textContent = '';
+}
+
+function _importStart(slot, filename){
+  const isRef = slot === 'ref';
+  // Masquer zone de dépôt, afficher chip chargé + barre
+  const progWrap  = document.getElementById(isRef ? 'importProg2' : 'importProg1');
+  const loadedDiv = document.getElementById(isRef ? 'importSlot2Loaded' : 'importSlot1Loaded');
+  const nameEl    = document.getElementById(isRef ? 'importSlot2Name' : 'importSlot1Name');
+  const barFill   = document.getElementById(isRef ? 'importBar2Fill' : 'importBar1Fill');
+  if(nameEl)    nameEl.textContent = filename;
+  if(loadedDiv) loadedDiv.style.display = 'none';
+  if(progWrap)  progWrap.style.display = 'flex';
+  if(barFill)   barFill.style.width = '0%';
+}
+
+function _importSetProgress(slot, pct, msg, color){
+  const isRef = slot === 'ref';
+  const barFill = document.getElementById(isRef ? 'importBar2Fill' : 'importBar1Fill');
+  const status  = document.getElementById(isRef ? 'importStatusRef' : 'importStatus');
+  if(barFill) barFill.style.width = Math.min(100, pct) + '%';
+  if(status){
+    status.textContent = msg || '';
+    status.style.color = color || 'var(--text2)';
+  }
+}
+
+function _importFinish(slot, filename, success, msg){
+  const isRef   = slot === 'ref';
+  const progWrap  = document.getElementById(isRef ? 'importProg2' : 'importProg1');
+  const loadedDiv = document.getElementById(isRef ? 'importSlot2Loaded' : 'importSlot1Loaded');
+  const nameEl    = document.getElementById(isRef ? 'importSlot2Name' : 'importSlot1Name');
+  if(success){
+    _importSetProgress(slot, 100, msg, 'var(--green)');
+    setTimeout(() => {
+      if(progWrap)  progWrap.style.display = 'none';
+      if(nameEl)    nameEl.textContent = filename;
+      if(loadedDiv) loadedDiv.style.display = 'flex';
+    }, 900);
+  } else {
+    _importSetProgress(slot, 100, msg, 'var(--red)');
+  }
+}
+
+/* Attend que le DOM de la vue parcours soit prêt (Live Server timing).
+   Ne rejette JAMAIS — résout toujours, même si le délai est dépassé.
+   Le guard requestAnimationFrame de render() prend le relais si besoin. */
+function _waitForView(timeoutMs){
+  timeoutMs = timeoutMs || 5000;
+  return new Promise(resolve => {
+    // Déjà prêt ?
+    if(typeof _fragmentsReady !== 'undefined' && _fragmentsReady) return resolve();
+    if(document.getElementById('schemaSvg')) return resolve();
+    const t0 = Date.now();
+    const poll = () => {
+      if(typeof _fragmentsReady !== 'undefined' && _fragmentsReady) return resolve();
+      if(document.getElementById('schemaSvg')) return resolve();
+      if(Date.now() - t0 > timeoutMs){
+        // Délai dépassé : on résout quand même, render() retentera via rAF
+        console.warn('[Arte-Board] _waitForView : délai dépassé, render() va réessayer.');
+        return resolve();
+      }
+      setTimeout(poll, 50);
+    };
+    setTimeout(poll, 50);
+  });
+}
+
+/* Dispatcher — slot = 'main' | 'ref' */
+function handleFile(file, slot){
+  slot = slot || 'main';
+  if(!file) return;
+  const name = file.name.toLowerCase();
+  if(!name.endsWith('.zip')){
+    const statusId = slot === 'ref' ? 'importStatusRef' : 'importStatus';
+    const progWrap = document.getElementById(slot === 'ref' ? 'importProg2' : 'importProg1');
+    if(progWrap) progWrap.style.display = 'flex';
+    _importSetProgress(slot, 0, '⚠ Format non supporté — importez un fichier .zip', 'var(--orange)');
+    return;
+  }
+  handleZip(file, slot);
+}
 
 /* ── Stack cycle bar hover ── */
 function stackSegEnter(el, evt){
@@ -799,59 +896,23 @@ function submitLogin(){
   setTimeout(closeLogin, 1500);
 }
 
-const importDrop=document.getElementById('importDrop');
-importDrop.addEventListener('dragover',e=>{e.preventDefault();importDrop.classList.add('dragover');});
-importDrop.addEventListener('dragleave',()=>importDrop.classList.remove('dragover'));
-importDrop.addEventListener('drop',e=>{e.preventDefault();importDrop.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
-
-// Dispatcher : ZIP ou XLSX ?
-function handleFile(file){
-  const name = file.name.toLowerCase();
-  if(name.endsWith('.zip')){
-    handleZip(file);
-  } else {
-    handleXlsx(file);
+/* ── Drag & drop sur les 2 zones ── */
+(function(){
+  function bindDrop(dropId, slot){
+    const el = document.getElementById(dropId);
+    if(!el) return;
+    el.addEventListener('dragover',  e => { e.preventDefault(); el.classList.add('dragover'); });
+    el.addEventListener('dragleave', ()  => el.classList.remove('dragover'));
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      el.classList.remove('dragover');
+      const f = e.dataTransfer.files[0];
+      if(f) handleFile(f, slot);
+    });
   }
-}
-
-// Import XLSX seul (sans images) — legacy, 1 seul scénario
-function handleXlsx(file, imageMap){
-  const status=document.getElementById('importStatus');
-  status.style.color='var(--text2)';
-  status.textContent='Lecture en cours…';
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const wb=XLSX.read(e.target.result,{type:'array'});
-      const scLabel = file.name.replace(/\.xlsx$/i,'');
-      const newLine = parseXlsxMaster(wb);
-      newLine.scenarios = [parseSingleScenario(wb, scLabel)];
-      applyPlagesFromWb(wb);
-      parseColors(wb);
-      applyBrandColors();
-      LINE=newLine;
-      parseCarouselSheet(wb, imageMap||{});
-      applyMTImagesFromWb(wb, imageMap||{});
-      currentSc=0;
-      rebuildUI();
-      render();
-      // Re-render l'onglet actif si différent de parcours
-      if(typeof currentTab !== 'undefined'){
-        if(currentTab==='terminus'   && typeof renderTerminus  ==='function') renderTerminus();
-        if(currentTab==='comparatif' && typeof renderComparatif==='function') renderComparatif();
-        if(currentTab==='synthese'   && typeof renderScorecard ==='function') renderScorecard();
-      }
-      status.style.color='var(--green)';
-      status.textContent=T('fileLoaded')+(LINE.meta.nomLigne||T('lineImported'));
-      setTimeout(closeImport,1500);
-    }catch(err){
-      status.style.color='var(--red)';
-      status.textContent=T('errorPrefix')+err.message;
-      console.error(err);
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
+  bindDrop('importDrop',    'main');
+  bindDrop('importDropRef', 'ref');
+})();
 
 // Import ZIP multi-fichiers :
 //   master.xlsx       → META, POINTS_CLES
@@ -886,11 +947,12 @@ function parseMTCsv(text){
   }
   return t.length > 5 ? { pk, t, v2 } : null;
 }
-async function handleZip(file){
-  const status=document.getElementById('importStatus');
-  status.style.color='var(--text2)';
-  status.textContent='Extraction du ZIP…';
+async function handleZip(file, slot){
+  slot = slot || 'main';
+  const isRef = slot === 'ref';
+  _importStart(slot, file.name);
   try{
+    _importSetProgress(slot, 5, 'Extraction du ZIP…');
     const zip = await JSZip.loadAsync(file);
 
     // Détecter préfixe racine (dossier créé par macOS/Windows)
@@ -951,7 +1013,7 @@ async function handleZip(file){
     });
     await Promise.all(imgPromises);
     GLOBAL_IMAGE_MAP = Object.assign({}, imageMap, mtImageMap);
-    status.textContent = T('zipExtracted').replace('{n}', Object.keys(imageMap).length);
+    _importSetProgress(slot, 30, `${Object.keys(imageMap).length} image(s) chargée(s)`);
 
     // ── GeoJSON tracé (trace.geojson à la racine du ZIP) ──
     _mapGeoJSON = null;
@@ -976,6 +1038,7 @@ async function handleZip(file){
 
     if(Object.keys(xlsxEntries).length === 0) throw new Error(T('noXlsx'));
 
+    _importSetProgress(slot, 45, 'Lecture du master…');
     // ── Lire master.xlsx (META + carousel) ──
     let masterMeta = {departH:6,departM:5,serviceHeures:18};
     let masterCarousel = [];
@@ -1004,7 +1067,8 @@ async function handleZip(file){
     const scenarios = [];
     const scenariosData = []; // données complètes par scénario
 
-    for(const label of scLabels){
+    for(const [idx, label] of scLabels.entries()){
+      _importSetProgress(slot, 55 + Math.round(idx/scLabels.length*25), `Scénario ${idx+1}/${scLabels.length} — ${label}`);
       const buf = await xlsxEntries[label].async('arraybuffer');
       const wb  = XLSX.read(buf, {type:'array'});
       const sc  = parseSingleScenario(wb, label);
@@ -1040,11 +1104,10 @@ async function handleZip(file){
     }
 
     const d0 = scenariosData[0];
-    LINE = {
+    const newLine = {
       meta:         masterMeta,
       scenarios,
-      scenariosData,          // toutes les données, indexées comme scenarios[]
-      // données actives (scénario 0 au départ)
+      scenariosData,
       stations:     d0.stations,
       inter:        d0.inter,
       retournement: d0.retournement,
@@ -1052,29 +1115,41 @@ async function handleZip(file){
       tenduR:       d0.tenduR,
       detenteA:     d0.detenteA,
       detenteR:     d0.detenteR,
-      infra:        d0.infra || [],  // éléments d'infra schéma de ligne
+      infra:        d0.infra || [],
     };
 
-    if(masterEntry) CAROUSEL_SLIDES = masterCarousel;
+    if(isRef){
+      // ── Slot référence : stocke dans LINE_REF, n'affecte pas les pages ──
+      LINE_REF = newLine;
+      _importFinish(slot, file.name, true,
+        `✓ ${scLabels.length} scénario(s) — ${LINE_REF.meta.nomLigne || file.name}`);
+    } else {
+      // ── Slot principal : comportement habituel ──
+      LINE = newLine;
+      if(masterEntry) CAROUSEL_SLIDES = masterCarousel;
+      currentSc = 0;
+      radarActiveScenarios  = null;
+      chargeActiveScenarios = null;
 
-    currentSc = 0;
-    radarActiveScenarios  = null;
-    chargeActiveScenarios = null;
-    rebuildUI();
-    render();
-    // Re-render l'onglet actif si différent de parcours
-    if(typeof currentTab !== 'undefined'){
-      if(currentTab==='terminus'   && typeof renderTerminus  ==='function') renderTerminus();
-      if(currentTab==='comparatif' && typeof renderComparatif==='function') renderComparatif();
-      if(currentTab==='synthese'   && typeof renderScorecard ==='function') renderScorecard();
+      _importSetProgress(slot, 85, 'Chargement de l\'interface…');
+      rebuildUI();
+
+      // Attendre que les fragments soient dans le DOM (Live Server)
+      await _waitForView(4000);
+
+      _importSetProgress(slot, 95, 'Rendu…');
+      render();
+      if(typeof currentTab !== 'undefined'){
+        if(currentTab==='terminus'   && typeof renderTerminus  ==='function') renderTerminus();
+        if(currentTab==='comparatif' && typeof renderComparatif==='function') renderComparatif();
+        if(currentTab==='synthese'   && typeof renderScorecard ==='function') renderScorecard();
+      }
+      _importFinish(slot, file.name, true,
+        `✓ ${scLabels.length} scénario(s) — ${LINE.meta.nomLigne || T('lineImported')}`);
     }
-    status.style.color='var(--green)';
-    status.textContent=`✓ ${scLabels.length} scénario(s) chargé(s) — ${LINE.meta.nomLigne||T('lineImported')}`;
-    setTimeout(closeImport,1500);
 
   } catch(err){
-    status.style.color='var(--red)';
-    status.textContent=T('errorPrefix')+err.message;
+    _importFinish(slot, file.name, false, '⚠ ' + err.message);
     console.error(err);
   }
 }

@@ -141,7 +141,7 @@ function _buildSVG(sc, scIdx, k) {
   /* ── Matériel roulant ──────────────────────────── */
   const mrRaw  = String(meta.mrType || 'metro').toLowerCase().replace(/[\s-]/g, '_');
   const mrKey  = _MR_SVG[mrRaw] ? mrRaw : 'metro';
-  const mrSvg  = `images/svg/${_MR_SVG[mrKey]}`;
+  const mrSvg  = `img/svg/${_MR_SVG[mrKey]}`;
   const mrLbl  = _MR_LBL[mrKey];
 
   /* ── Scorecard (META xlsx) ─────────────────────── */
@@ -235,7 +235,7 @@ ${logo}
 <text x="399" y="148" fill="white"
   font-size="36" font-weight="700" letter-spacing="-0.5" font-family="system-ui,Arial">${temps}</text>
 <image x="647" y="113" width="58" height="33"
-  href="images/svg/travel_time_w.svg"
+  href="img/svg/travel_time_w.svg"
   preserveAspectRatio="xMidYMid meet" opacity="0.82"/>
 <text x="399" y="166" fill="rgba(255,255,255,0.5)"
   font-size="12" font-family="system-ui,Arial">entre ${_xe(stA)} et ${_xe(stR)}</text>
@@ -270,7 +270,7 @@ ${logo}
 
 <!-- ── KPI GAUCHE : Fréquence ─────────────────────── -->
 <image x="160" y="245" width="54" height="54"
-  href="images/svg/Frequence_w.svg"
+  href="img/svg/Frequence_w.svg"
   preserveAspectRatio="xMidYMid meet" opacity="0.85"/>
 <text x="222" y="281" fill="white"
   font-size="30" font-weight="700" font-family="system-ui,Arial">${freq}</text>
@@ -283,12 +283,12 @@ ${logo}
 <text x="798" y="282" fill="rgba(255,255,255,0.5)"
   font-size="11" font-family="system-ui,Arial">${mrLbl}</text>
 <image x="890" y="245" width="54" height="54"
-  href="images/svg/Designer_w.svg"
+  href="img/svg/Designer_w.svg"
   preserveAspectRatio="xMidYMid meet" opacity="0.85"/>
 
 <!-- ── KPI BAS : Vitesse commerciale ────────────── -->
 <image x="404" y="370" width="54" height="54"
-  href="images/svg/speedometer_w.svg"
+  href="img/svg/speedometer_w.svg"
   preserveAspectRatio="xMidYMid meet" opacity="0.85"/>
 <text x="466" y="407" fill="white"
   font-size="28" font-weight="700" font-family="system-ui,Arial">${vit}</text>

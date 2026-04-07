@@ -180,8 +180,10 @@ function _mtFallback(img, ph){
 function _drawMTChart(canvas, data){
   const worldView = _mtWorldView;
   const dpr = window.devicePixelRatio || 1;
-  const W   = (card_ && card_.offsetWidth > 10 ? card_.offsetWidth : canvas.offsetWidth) || 400;
-  const H   = (card_ && card_.offsetHeight > 10 ? card_.offsetHeight : canvas.offsetHeight) || 200;
+  // canvas est position:absolute → lire la taille depuis le parent
+  const _p  = canvas.parentElement;
+  const W   = (_p && _p.offsetWidth  > 10 ? _p.offsetWidth  : canvas.offsetWidth)  || 400;
+  const H   = (_p && _p.offsetHeight > 10 ? _p.offsetHeight : canvas.offsetHeight) || 200;
   if(W <= 0 || H <= 0) return;
 
   canvas.width  = Math.round(W * dpr);

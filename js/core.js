@@ -1,4 +1,5 @@
-let LINE = null; // Aucune donnée — importer un fichier .xlsx ou .zip
+let LINE = null; // Données projet principal
+let LINE_REF = null; // Données version de référence (comparaison inter-projets)
 /* ── core.js — État global, init ── */
 /* ═══════════════════════════════════════════════
    ÉTAT

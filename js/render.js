@@ -265,6 +265,11 @@ function pieIcon(label){
 ═══════════════════════════════════════════════ */
 function render(){
   if(!LINE){ showEmptyState(); return; }
+  // Guard : la page parcours n'est peut-être pas encore chargée (Live Server)
+  if(!document.getElementById('schemaSvg') || !document.getElementById('tableBody')){
+    requestAnimationFrame(render);
+    return;
+  }
   const sc     = LINE.scenarios[currentSc];
   const sp     = computeSPTroncons(sc, LINE);
   const isRetour = currentDir === 'retour';

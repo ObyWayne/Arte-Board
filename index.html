@@ -12,39 +12,100 @@
 </head>
 <body>
 
-<!-- IMPORT OVERLAY Excel -->
+<!-- IMPORT OVERLAY -->
 <div class="import-overlay" id="importOverlay">
   <div class="import-box">
-    <h2 id="importTitle">📂 Importer un fichier de ligne</h2>
-    <p>Select a <strong>.xlsx</strong> file or a <strong>.zip</strong> (xlsx + <code>images/</code> folder) in Tchoo format.</p>
-    <div class="import-drop" id="importDrop" onclick="document.getElementById('fileInput').click()">
-      <input type="file" id="fileInput" accept=".xlsx,.zip" onchange="handleFile(this.files[0])">
-      <div>⬆ Click or drag &amp; drop the <strong>.xlsx</strong> or <strong>.zip</strong> file here</div>
-    </div>
-    <div class="import-status" id="importStatus"></div>
-    <p style="font-size:.6rem;font-family:var(--fontb);color:var(--text3);margin-top:.4rem;line-height:1.6;">
-      💡 <strong style="color:var(--text2)">XLSX seul</strong> : 1 scénario, sans images.<br>
-      📦 <strong style="color:var(--text2)">ZIP multi-fichiers</strong> : <code>master.xlsx</code> (META + carousel) + 1 fichier par scénario + <code>images/</code> + <code>marche_type/</code>.
-    </p>
-    <div class="import-section-title" id="importSlideTitle">🖼 Points clés du réseau — Ajouter une slide</div>
-    <div class="slide-form">
-      <div class="slide-form-row">
-        <div class="slide-img-drop" id="slideImgDrop" onclick="document.getElementById('slideImgInput').click()">
-          <input type="file" id="slideImgInput" accept="image/*" onchange="slidePreviewImg(this)">
-          <span id="slideImgIcon">🖼</span>
-          <span id="slideImgLbl">Image</span>
-        </div>
-        <textarea class="slide-txt-input" id="slideTxtInput" placeholder="Title and description of this slide…" rows="3"></textarea>
+
+    <!-- En-tête -->
+    <div class="import-hdr">
+      <div class="import-hdr-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span id="importTitle">Importer un projet</span>
       </div>
-      <button class="slide-add-btn" onclick="slideAdd()">+ Add this slide</button>
+      <button class="import-hdr-close" onclick="closeImport()" title="Fermer">✕</button>
     </div>
 
-    <!-- Liste des slides existantes -->
-    <div class="slides-list" id="slidesList"></div>
+    <!-- ── DEUX ZONES D'IMPORT ── -->
+    <div class="import-slots">
 
+      <!-- SLOT 1 : Projet principal -->
+      <div class="import-slot import-slot-main" id="importSlot1">
+        <div class="import-slot-label">
+          <span class="import-slot-badge import-slot-badge-main">Projet principal</span>
+          <span class="import-slot-hint">Alimente toutes les pages</span>
+        </div>
+        <div class="import-drop" id="importDrop"
+             onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept=".zip" onchange="handleFile(this.files[0], 'main')">
+          <div class="import-drop-body">
+            <div class="import-drop-icon" id="importDrop1Icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="import-drop-text">
+              <span class="import-drop-title">Glisser-déposer ou cliquer</span>
+              <span class="import-drop-sub">Fichier <strong>.zip</strong> Arte-Board</span>
+            </div>
+          </div>
+        </div>
+        <!-- État après chargement slot 1 -->
+        <div class="import-slot-loaded" id="importSlot1Loaded" style="display:none;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="importSlot1Name">projet.zip</span>
+          <button class="import-slot-change" onclick="document.getElementById('fileInput').click()">Changer</button>
+        </div>
+        <!-- Barre + statut slot 1 -->
+        <div class="import-progress-wrap" id="importProg1" style="display:none;">
+          <div class="import-bar-track"><div class="import-bar-fill" id="importBar1Fill" style="width:0%"></div></div>
+          <div class="import-status" id="importStatus"></div>
+        </div>
+      </div>
+
+      <!-- Séparateur -->
+      <div class="import-slots-sep">
+        <div class="import-slots-sep-line"></div>
+        <div class="import-slots-sep-label">+</div>
+        <div class="import-slots-sep-line"></div>
+      </div>
+
+      <!-- SLOT 2 : Version de référence -->
+      <div class="import-slot import-slot-ref" id="importSlot2">
+        <div class="import-slot-label">
+          <span class="import-slot-badge import-slot-badge-ref">Version de référence</span>
+          <span class="import-slot-hint">Optionnel · page Comparaison uniquement</span>
+        </div>
+        <div class="import-drop import-drop-ref" id="importDropRef"
+             onclick="document.getElementById('fileInputRef').click()">
+          <input type="file" id="fileInputRef" accept=".zip" onchange="handleFile(this.files[0], 'ref')">
+          <div class="import-drop-body">
+            <div class="import-drop-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </div>
+            <div class="import-drop-text">
+              <span class="import-drop-title">Ancienne version / étude antérieure</span>
+              <span class="import-drop-sub">N'affecte pas Parcours, Comparatif, Terminus ni Synthèse</span>
+            </div>
+          </div>
+        </div>
+        <!-- État après chargement slot 2 -->
+        <div class="import-slot-loaded" id="importSlot2Loaded" style="display:none;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="importSlot2Name">reference.zip</span>
+          <button class="import-slot-change" onclick="document.getElementById('fileInputRef').click()">Changer</button>
+        </div>
+        <!-- Barre + statut slot 2 -->
+        <div class="import-progress-wrap" id="importProg2" style="display:none;">
+          <div class="import-bar-track"><div class="import-bar-fill import-bar-fill-ref" id="importBar2Fill" style="width:0%"></div></div>
+          <div class="import-status" id="importStatusRef"></div>
+        </div>
+      </div>
+
+    </div><!-- /import-slots -->
+
+    <!-- Actions -->
     <div class="import-actions">
-      <button class="import-cancel" onclick="closeImport()">Close</button>
+      <button class="import-cancel" onclick="closeImport()">Fermer</button>
     </div>
+
   </div>
 </div>
 

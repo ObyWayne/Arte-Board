@@ -63,6 +63,7 @@ function toggleDark(){
   drawClock();
   updateClockLegend();
   if(LINE && typeof renderMarcheType === 'function') renderMarcheType();
+  if(LINE && typeof renderCharts     === 'function') renderCharts(currentSc);
   if(LINE && typeof renderComparatif === 'function') renderComparatif(); 
 }
 
