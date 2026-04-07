@@ -181,19 +181,17 @@ function renderCharts(scIdx){
     ctx.arc(cx, cy - R_MID, TRACK/2 - 1, 0, Math.PI*2);
     ctx.fillStyle = cBdr; ctx.fill();
 
-    // ── Affichage central ──
-    const mm = Math.floor(total);
-    const szNum = Math.max(16, CSS * 0.265);
-    const szMin = Math.max(8,  CSS * 0.1);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    // Grand chiffre
+    // ── Affichage central : 2 lignes "XX min / YY sec" ──
+    const mm  = Math.floor(total);
+    const ss  = Math.round((total - mm) * 60);
+    const szL = Math.max(11, CSS * 0.175);
+    const gap = szL * 0.65;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = cTxt;
-    ctx.font = `900 ${szNum}px Barlow Condensed,sans-serif`;
-    ctx.fillText(`${mm}`, cx, cy + szNum * 0.35);
-    // Libellé "min"
+    ctx.font = `800 ${szL}px Barlow Condensed,sans-serif`;
+    ctx.fillText(`${mm} min`, cx, cy - gap);
     ctx.fillStyle = cT2;
-    ctx.font = `600 ${szMin}px Barlow Condensed,sans-serif`;
-    ctx.fillText('min', cx, cy + szNum * 0.35 + szMin * 1.25);
+    ctx.fillText(`${ss} s`, cx, cy + gap);
 
     // ── Stockage hover ──
     canvasEl._chrono = { segs, total, segAngles, cx, cy, R_IN, R_OUT };
@@ -344,28 +342,36 @@ function renderCharts(scIdx){
     const S = isEN
       ? ['Run','Priority','Recovery','Dwell']
       : ['Marche','Priorité','Détente','Arrêts'];
-    function miniCell(id, lbl){
+    function miniCell(id, lbl, color){
       return `<div style="display:flex;flex-direction:column;align-items:center;gap:.1rem;">`
+        +`<div style="font-size:.44rem;font-weight:800;color:${color};text-align:center;`
+        +`letter-spacing:.04em;text-transform:uppercase;line-height:1.2;margin-bottom:.05rem">${lbl}</div>`
         +`<canvas id="${id}" style="width:${MINI}px;height:${MINI}px;display:block;"></canvas>`
-        +`<div style="font-size:.42rem;font-weight:700;color:var(--text3);text-align:center;`
-        +`letter-spacing:.04em;text-transform:uppercase;line-height:1.2">${lbl}</div></div>`;
+        +`</div>`;
     }
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;">
-      <div style="display:flex;align-items:flex-end;justify-content:center;gap:1.5rem;">
+    function miniGroup(ids, lbls, color){
+      return `<div style="display:flex;gap:.35rem;">`
+        + ids.map((id,i) => miniCell(id, lbls[i], color)).join('')
+        +`</div>`;
+    }
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:.45rem;">
+      <div style="display:flex;align-items:center;justify-content:space-evenly;width:100%;">
         <div class="bop-pie-col">
-          <div class="bop-sens-label" style="color:var(--blue)">↓ ${T('dirOutbound')}</div>
+          <div style="font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.25rem;">↓ ${T('dirOutbound')}</div>
           <canvas id="${outId}" style="width:${pieSize}px;height:${pieSize}px;display:block;"></canvas>
         </div>
         <div class="bop-pie-col">
-          <div class="bop-sens-label" style="color:var(--orange)">↑ ${T('dirInbound')}</div>
+          <div style="font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);text-align:center;margin-bottom:.25rem;">↑ ${T('dirInbound')}</div>
           <canvas id="${inId}" style="width:${pieSize}px;height:${pieSize}px;display:block;"></canvas>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,${MINI}px);gap:.35rem;">
-        ${miniCell(outId+'_m0',S[0])}${miniCell(outId+'_m1',S[1])}${miniCell(inId+'_m0',S[0])}${miniCell(inId+'_m1',S[1])}
+      <div style="display:flex;justify-content:space-evenly;width:100%;">
+        ${miniGroup([outId+'_m0',outId+'_m1'], S.slice(0,2), 'var(--blue)')}
+        ${miniGroup([inId+'_m0', inId+'_m1'],  S.slice(0,2), 'var(--orange)')}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,${MINI}px);gap:.35rem;">
-        ${miniCell(outId+'_m2',S[2])}${miniCell(outId+'_m3',S[3])}${miniCell(inId+'_m2',S[2])}${miniCell(inId+'_m3',S[3])}
+      <div style="display:flex;justify-content:space-evenly;width:100%;">
+        ${miniGroup([outId+'_m2',outId+'_m3'], S.slice(2,4), 'var(--blue)')}
+        ${miniGroup([inId+'_m2', inId+'_m3'],  S.slice(2,4), 'var(--orange)')}
       </div>
     </div>`;
   }
@@ -537,4 +543,3 @@ function renderDepotKPI(k){
     </div>`;
   }).join('');
 }
-
