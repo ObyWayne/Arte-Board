@@ -200,6 +200,115 @@ const DICT = {
   legendAlightings: {fr:'↓ Descentes',  en:'↓ Alightings'},
   // KPI subs
   tripsKm:          {fr:'courses × {d} km', en:'trips × {d} km'},
+  // Import progress
+  importFormat:     {fr:'⚠ Format non supporté — importez un fichier .zip', en:'⚠ Unsupported format — please import a .zip file'},
+  importExtracting: {fr:'Extraction du ZIP…',           en:'Extracting ZIP…'},
+  importReadMaster: {fr:'Lecture du master…',            en:'Reading master…'},
+  importLoadingUI:  {fr:'Chargement de l\'interface…',  en:'Loading interface…'},
+  importRendering:  {fr:'Rendu…',                       en:'Rendering…'},
+  importScenario:   {fr:'Scénario {i}/{n} — {label}',   en:'Scenario {i}/{n} — {label}'},
+  // Fullscreen / carte
+  lineDiagram:      {fr:'Schéma de ligne',              en:'Line diagram'},
+  trackOccupancy:   {fr:'Occupation des voies',         en:'Track occupancy'},
+  noMapCoords:      {fr:'Ajoutez des colonnes LAT/LON dans la feuille STATIONS ou un fichier trace.geojson dans le ZIP',
+                     en:'Add LAT/LON columns in the STATIONS sheet or a trace.geojson in the ZIP'},
+  // Gantt
+  ganttConflict:    {fr:'Conflit',                      en:'Conflict'},
+  ganttOcc:         {fr:'Occ.',                         en:'Occ.'},
+  // Settings panel
+  decSpeedLabel:    {fr:'Décimales vitesse',            en:'Speed decimals'},
+  // Terminus — images
+  termNoImgDefined:    {fr:'Aucune image définie',                                      en:'No image defined'},
+  termNoImgHint:       {fr:'Ajoutez la colonne TER_A / TER_R dans la feuille SCENARIOS', en:'Add TER_A / TER_R column in SCENARIOS sheet'},
+  termImgNotFound:     {fr:'Image introuvable dans le ZIP',                              en:'Image not found in ZIP'},
+  termDiagram:         {fr:'Schéma terminus',                                            en:'Terminus diagram'},
+  // Terminus — phases occupation
+  termPhaseDeparture:  {fr:'Quai Départ',       en:'Departure Platform'},
+  termPhaseYard:       {fr:'Retournement',       en:'Station Yard'},
+  termPhaseArrival:    {fr:'Quai Arrivée',       en:'Arrival Platform'},
+  // Serpent de charge
+  chargeBoardings:     {fr:'Montées ↑',          en:'Boardings ↑'},
+  chargeAlightings:    {fr:'Descentes ↓',        en:'Alightings ↓'},
+  chargeLoad:          {fr:'Charge',             en:'Load'},
+  chargeLoadCumul:     {fr:'Charge cumulée',     en:'Load (cumul.)'},
+  chargeDwEst:         {fr:'DW théo.',           en:'DW est.'},
+  chargeBoardAlight:   {fr:'Montées / Descentes',en:'Boardings / Alightings'},
+  chargeCaution:       {fr:'Attention ⚠',        en:'Caution'},
+  chargeCritical:      {fr:'Critique !',         en:'Critical !'},
+  chargeBoardShort:    {fr:'Montées',            en:'Boardings'},
+  chargeAlightShort:   {fr:'Descentes',          en:'Alightings'},
+  chargeStatus:        {fr:'Statut',             en:'Status'},
+  // Energy flow
+  energyRunning:       {fr:'Marche',                              en:'Running'},
+  energyOfCycle:       {fr:'du cycle',                            en:'of cycle'},
+  energyAdjustable:    {fr:'Temps ajustable',                     en:'Adjustable'},
+  energyNeedScenarios: {fr:'Il faut au moins 2 scénarios nominaux', en:'Need at least 2 scenarios'},
+  energyCompare:       {fr:'Comparer',                            en:'Compare'},
+  // Comparatif terminus
+  compTermAdjustable:  {fr:'⏹ Temps ajustable (compressible)',    en:'⏹ Adjustable (compressible)'},
+  compTermTotal:       {fr:'Temps total',                         en:'Total'},
+  compTermAdjShort:    {fr:'Temps compressible (ajustable)',      en:'Adjustable (compressible)'},
+  compTermScenarios:   {fr:'Scénarios',                           en:'Scenarios'},
+  // Tableau comparatif + matrice SP
+  compScenario:        {fr:'Scénario',                            en:'Scenario'},
+  compIncidentStation: {fr:'Station (incident)',                  en:'Incident station'},
+  // Synthèse
+  syntheseNoData:      {fr:'Importez un fichier pour afficher la synthèse.', en:'Import a file to display the summary.'},
+  syntheseNoNominal:   {fr:'Aucun scénario NOMINAL disponible.',  en:'No NOMINAL scenario available.'},
+  // Graphiques BOP — segments
+  bopRunTime:       {fr:'Marche tendue',      en:'Run time'},
+  bopPriority:      {fr:'Priorité',           en:'Priority'},
+  bopRecovery:      {fr:'Détente',            en:'Recovery'},
+  bopDwell:         {fr:'Arrêts station',     en:'Station dwell'},
+  // BOP — labels courts (renderBopPies)
+  bopRun:           {fr:'Marche',             en:'Run'},
+  bopPriorityShort: {fr:'Priorité',           en:'Priority'},
+  bopRecoveryShort: {fr:'Détente',            en:'Recovery'},
+  bopDwellShort:    {fr:'Arrêts',             en:'Dwell'},
+  // Cycle stack — segments
+  cycleOutbound:    {fr:'Temps aller',        en:'Outbound time'},
+  cycleInbound:     {fr:'Temps retour',       en:'Inbound time'},
+  cycleReversal:    {fr:'Retournement',       en:'Reversal'},
+  cycleAllAbbr:     {fr:'All.',               en:'Out.'},
+  cycleRetAbbr:     {fr:'Ret.',               en:'In.'},
+  // Cycle diagram — labels canvas
+  cycleDirOut:      {fr:'↓ Aller',            en:'↓ Outbound'},
+  cycleDirIn:       {fr:'↑ Retour',           en:'↑ Inbound'},
+  cycleTermA:       {fr:'Term. aller',        en:'End term.'},
+  cycleTermR:       {fr:'Term. retour',       en:'Start term.'},
+  cycleTimeAxis:    {fr:'min',                en:'Time'},
+  cycleTotal:       {fr:'Cycle total',        en:'Total cycle'},
+  cycleOutShort:    {fr:'Aller',              en:'Outbound'},
+  cycleInShort:     {fr:'Retour',             en:'Inbound'},
+  // Dépôt KPI
+  depotInSvc:       {fr:'en ligne',           en:'in svc'},
+  // Scénario pill
+  nominalLabel:     {fr:'Nominal',            en:'Nominal'},
+  // Horloge — labels courts dans les tranches SVG
+  clockSliceHP:     {fr:'HP',                           en:'Peak'},
+  clockSliceHC:     {fr:'Heure creuse',                 en:'Off-peak'},
+  clockSliceHS:     {fr:'HS',                           en:'Out of service'},
+  // Légende schéma de ligne
+  legendTerminus:     {fr:'Terminus',                   en:'Terminal'},
+  legendStopMajor:    {fr:'Stn. importante',            en:'Stop (major)'},
+  legendStop:         {fr:'Station',                    en:'Stop'},
+  legendDoubleTrack:  {fr:'Voie double',                en:'Double track'},
+  legendReversal:     {fr:'Retournement',               en:'Reversal'},
+  legendSingleTrack:  {fr:'Voie unique',                en:'Single track'},
+  legendDedLane1:     {fr:'SP (1 côté)',                en:'Ded. lane (1 side)'},
+  legendDedLaneBoth:  {fr:'SP (2 côtés)',               en:'Ded. lane (both)'},
+  legendOneWay:       {fr:'Sens unique SP',             en:'One-way (SP)'},
+  legendDepot:        {fr:'Dépôt',                      en:'Depot'},
+  legendIntersection: {fr:'Carrefour',                  en:'Intersection'},
+  legendBranchVD:     {fr:'Débranchement VD',           en:'Branch (VD)'},
+  legendSwitch:       {fr:'Aiguillage',                 en:'Switch'},
+  legendTunnel:       {fr:'Tunnel',                     en:'Tunnel'},
+  legendBridge:       {fr:'Pont',                       en:'Bridge'},
+  legendTempTerminal: {fr:'Terminus prov.',             en:'Temp. terminal'},
+  legendClosedSection:{fr:'Hors service',               en:'Closed section'},
+  // UI dark/light
+  darkMode:         {fr:'dark',                         en:'dark'},
+  lightMode:        {fr:'light',                        en:'light'},
   // Error messages
   noScenarioFile:   {fr:'Aucun fichier scénario trouvé (xlsx hors master.xlsx)', en:'No scenario file found (xlsx other than master.xlsx)'},
 };
@@ -306,6 +415,67 @@ function toggleLang(){
   applyLang();
 }
 
-// Appel initial au chargement — FR par défaut
+// Note : applyLang() est rappelé par initApp() une fois les fragments HTML chargés.
+// Ce listener anticipe les éléments présents dès le shell (index.html), mais la plupart
+// des getElementById retourneront null à ce stade — les gardes if(el) évitent tout crash.
 document.addEventListener('DOMContentLoaded', ()=>{ applyLang(); });
 
+/* ═══════════════════════════════════════════════
+   SETTINGS PANEL
+   (déplacé depuis parser.js)
+═══════════════════════════════════════════════ */
+function toggleSettingsPanel(){
+  _settingsOpen = !_settingsOpen;
+  const panel   = document.getElementById('settingsPanel');
+  const overlay = document.getElementById('settingsOverlay');
+  const arrow   = document.getElementById('settingsTabArrow');
+  const burger  = document.getElementById('hamburgerBtn');
+  if(panel)   panel.classList.toggle('open', _settingsOpen);
+  if(overlay) overlay.classList.toggle('show', _settingsOpen);
+  if(arrow)   arrow.innerHTML = _settingsOpen ? '&gt;' : '&lt;';
+  if(burger)  burger.classList.toggle('active', _settingsOpen);
+}
+
+function applyKpiSticky(){
+  const banner = document.querySelector('.kpi-banner');
+  if(!banner) return;
+  if(_kpiSticky){
+    banner.style.cssText = 'position:sticky;top:0;z-index:200;background:transparent;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding-top:.4rem;padding-bottom:.4rem;margin-bottom:.5rem;';
+  } else {
+    banner.style.cssText = '';
+  }
+}
+
+function applySettings(){
+  // Unité de vitesse
+  const su = document.getElementById('settSpeedUnit');
+  if(su) _speedUnit = su.value;
+  // Décimales
+  const dt = document.getElementById('settDecimals');
+  if(dt) _decTime = parseInt(dt.value)||1;
+  const dd = document.getElementById('settDecimalsKm');
+  if(dd) _decDist = parseInt(dd.value)||2;
+  const ds = document.getElementById('settDecimalsSpd');
+  if(ds) _decSpd  = parseInt(ds.value)||1;
+  // Libellé unité vitesse dans le settings
+  const lbl = document.getElementById('settLblDecimalsSpd');
+  if(lbl) lbl.textContent = `${T('decSpeedLabel')} (${_speedUnit})`;
+  // Seuils occupation
+  const s1 = parseFloat(document.getElementById('settOccupS1').value)||20;
+  const s2 = parseFloat(document.getElementById('settOccupS2').value)||30;
+  window.SETT_OCCUP_S1 = s1;
+  window.SETT_OCCUP_S2 = s2;
+  // KPIs sticky
+  const sk = document.getElementById('settKpiSticky');
+  if(sk) _kpiSticky = sk.checked;
+  applyKpiSticky();
+  // Re-render
+  if(LINE && typeof render      === 'function') render();
+  if(LINE && typeof renderTerminus === 'function') renderTerminus();
+}
+
+/* Lit une valeur de setting numérique avec valeur par défaut */
+function getSett(id, def){
+  const el = document.getElementById(id);
+  return el ? (parseFloat(el.value)||def) : def;
+}

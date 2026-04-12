@@ -1,4 +1,12 @@
 /* ── render.js — Render principal, plages, carousel ── */
+
+/* ═══════════════════════════════════════════════
+   COULEURS INFRA SCHÉMA
+   Non personnalisables via feuille COLOR (couleurs de convention technique)
+═══════════════════════════════════════════════ */
+const INFRA_COL_HS  = '#e8453c'; // rouge — section hors service / fermée
+const INFRA_COL_VU  = '#6040b0'; // bleu  — voie unique
+const INFRA_COL_VSP = '#22c55e'; // vert  — site propre
 /* ═══════════════════════════════════════════════
    BUILD UI (scénarios dynamiques)
 ═══════════════════════════════════════════════ */
@@ -63,7 +71,7 @@ function _buildSPRow(nomIdx, autoSelectNom) {
   const nomPill = document.createElement('div');
   nomPill.className = 'sc-pill sc-sp-pill on';
   nomPill.dataset.idx = nomIdx;
-  nomPill.textContent = 'Nominal';
+  nomPill.textContent = T('nominalLabel');
   nomPill.onclick = () => _selectSP(nomPill, nomIdx);
   spRow.appendChild(nomPill);
 
@@ -133,10 +141,13 @@ function drawClock(){
   const svg = document.getElementById('clockSvg');
   if(!svg) return;
 
-  // R=94  : bord externe du cadran
-  // R_SEG=72 : bord interne des secteurs colorés (anneau large)
-  // R_FACE=68 : disque blanc/fond central avec les chiffres
-  // R_NUM=58  : rayon où placer les chiffres
+  // Constantes du cadran SVG 200×200 (viewBox 0 0 200 200)
+  // CX/CY      : centre du cadran
+  // R          : rayon externe de l'anneau de plages
+  // R_SEG      : rayon interne de l'anneau (bord du disque central)
+  // R_FACE     : rayon du disque de fond central
+  // R_NUM      : rayon de placement des chiffres
+  // R_TICK_*   : rayons des traits de graduation
   const CX=100, CY=100;
   const R=94, R_SEG=70, R_FACE=68, R_NUM=56;
   const R_TICK_OUT=68, R_TICK_MAJ=60, R_TICK_MIN=64;
@@ -160,7 +171,7 @@ function drawClock(){
     const op = p.type==='HS' ? '.25' : '.80';
     const col = plageColor(p);
     const freqLabel = p.freq ? ` · ${fmtFreq(p.freq)} min` : '';
-    const label = `${p.type === 'HP' ? (isEN?'Peak':'HP') : p.type === 'HC' ? (isEN?'Off-peak':'Heure creuse') : (isEN?'Out of service':'HS')}`;
+    const label = p.type === 'HP' ? T('clockSliceHP') : p.type === 'HC' ? T('clockSliceHC') : T('clockSliceHS');
     const hours = `${minToHM(p.debut)} – ${minToHM(p.fin)}`;
     const freqTxt = p.freq ? `${fmtFreq(p.freq)} min` : '—';
     html += `<path class="clock-slice" d="${arcPath(CX,CY,R_SEG,R-1,aS,aE)}"
@@ -227,7 +238,7 @@ function updateClockLegend(){
     const color = hcMap[f];
     return `<div class="clock-leg-item">
       <div class="clock-leg-dot" style="background:${color}"></div>
-      <span style="color:var(--text2)">${isEN ? 'Off peak' : 'Heure creuse'} · ${fmtFreq(f)} min</span>
+      <span style="color:var(--text2)">${T('clockSliceHC')} · ${fmtFreq(f)} min</span>
     </div>`;
   }).join('');
 }
@@ -509,7 +520,7 @@ function render(){
     if(s.side==='DG' || s.side==='SU') return s.side;
     return isRetour ? (s.side==='D'?'G':'D') : s.side;
   };
-  const VSP_COL = '#22c55e';
+  const VSP_COL = INFRA_COL_VSP;
 
   for(let i=0; i<N_ALL-1; i++){
     const y1 = scStY(i), y2 = scStY(i+1);
@@ -518,11 +529,11 @@ function render(){
 
     if(isBloc || nextBloc){
       // Section hors-service : tireté rouge mono-voie centré
-      h += scLine(SC_CX, y1, SC_CX, y2, '#e8453c', 2.5, '5,4');
+      h += scLine(SC_CX, y1, SC_CX, y2, INFRA_COL_HS, 2.5, '5,4');
     } else if(isVU(i)){
-      h += scLine(SC_CX, y1, SC_CX, y2, '#6040b0', 2, '6,4');
+      h += scLine(SC_CX, y1, SC_CX, y2, INFRA_COL_VU, 2, '6,4');
       const mid=(y1+y2)/2;
-      h += `<polygon points="${SC_CX},${mid-5} ${SC_CX-3},${mid+2} ${SC_CX+3},${mid+2}" fill="#6040b0" opacity=".6"/>`;
+      h += `<polygon points="${SC_CX},${mid-5} ${SC_CX-3},${mid+2} ${SC_CX+3},${mid+2}" fill="${INFRA_COL_VU}" opacity=".6"/>`;
     } else {
       const vsp = getVspSide(i);
       const colL = (vsp==='G'||vsp==='DG'||vsp==='SU') ? VSP_COL : '#a06bff';
@@ -879,8 +890,13 @@ function renderSchemaLegend(infra){
     ? infra.some(e => t.includes(e.type))
     : infra.some(e => e.type === t);
 
-  const purple='#a06bff', green='#3ecf6a', orange='#f5a623',
-        red='#e8453c', blue='#6040b0', vspCol='#22c55e';
+  // Utilise BRAND pour les couleurs personnalisables, constantes pour les couleurs de convention
+  const purple = BRAND.primaire1;
+  const green  = BRAND.primaire2;
+  const orange = BRAND.retour;
+  const red    = INFRA_COL_HS;
+  const blue   = INFRA_COL_VU;
+  const vspCol = INFRA_COL_VSP;
 
   // Chaque item : icône SVG (viewBox 0 0 24 12) + libellé
   const ICW = 24, ICH = 12, cy = ICH/2;
@@ -891,59 +907,59 @@ function renderSchemaLegend(infra){
   add(
     `<rect x="2" y="${cy-3}" width="14" height="6" rx="3" fill="${green}" stroke="${green}" stroke-width="1"/>` +
     `<text x="3.5" y="${cy+1}" font-size="4.5px" font-family="'Barlow Condensed',sans-serif" font-weight="800" fill="#0e1018">AV</text>`,
-    isEN ? 'Terminal' : 'Terminus');
+    T('legendTerminus'));
 
   add(
     `<rect x="2" y="${cy-3}" width="14" height="6" rx="3" fill="${purple}" stroke="${purple}" stroke-width="1"/>`,
-    isEN ? 'Stop (major)' : 'Stn. importante');
+    T('legendStopMajor'));
 
   add(
     `<rect x="2" y="${cy-3}" width="14" height="6" rx="3" fill="var(--bg)" stroke="${purple}" stroke-width="1.2"/>`,
-    isEN ? 'Stop' : 'Station');
+    T('legendStop'));
 
   add(
     `<line x1="8"  y1="${cy-5}" x2="8"  y2="${cy+5}" stroke="${purple}" stroke-width="1.8"/>` +
     `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${purple}" stroke-width="1.8"/>`,
-    isEN ? 'Double track' : 'Voie double');
+    T('legendDoubleTrack'));
 
   add(
     `<circle cx="10" cy="${cy}" r="4" fill="rgba(160,107,255,.15)" stroke="${purple}" stroke-width="1.2"/>` +
     `<path d="M 6 ${cy-2} Q 3 ${cy} 6 ${cy+2}" fill="none" stroke="${purple}" stroke-width="1.4" stroke-linecap="round"/>` +
     `<polygon points="6,${cy+2} 9,${cy+1} 4.5,${cy+1}" fill="${purple}"/>`,
-    isEN ? 'Reversal' : 'Retournement');
+    T('legendReversal'));
 
   /* ── Conditionnels ── */
   if(infra.some(e=>e.type==='VU_DEBUT'))
     add(
       `<line x1="10" y1="${cy-5}" x2="10" y2="${cy+5}" stroke="${blue}" stroke-width="1.8" stroke-dasharray="4,2.5"/>` +
       `<polygon points="10,${cy-3} 7.5,${cy+2} 12.5,${cy+2}" fill="${blue}" opacity=".7"/>`,
-      isEN ? 'Single track' : 'Voie unique');
+      T('legendSingleTrack'));
 
   if(has(['VSP_D','VSP_G']))
     add(
       `<line x1="8"  y1="${cy-5}" x2="8"  y2="${cy+5}" stroke="${purple}" stroke-width="1.8"/>` +
       `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>`,
-      isEN ? 'Ded. lane (1 side)' : 'SP (1 côté)');
+      T('legendDedLane1'));
 
   if(has(['VSP_DG','VSP']))
     add(
       `<line x1="8"  y1="${cy-5}" x2="8"  y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>` +
       `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>`,
-      isEN ? 'Ded. lane (both)' : 'SP (2 côtés)');
+      T('legendDedLaneBoth'));
 
   if(has(['VSP_SU','VSP_SENS_UNIQUE']))
     add(
       `<line x1="8"  y1="${cy-5}" x2="8"  y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>` +
       `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${vspCol}" stroke-width="3"/>` +
       `<polygon points="10.5,${cy+4} 7.5,${cy} 13.5,${cy}" fill="${vspCol}" opacity=".9"/>`,
-      isEN ? 'One-way (SP)' : 'Sens unique SP');
+      T('legendOneWay'));
 
   if(has('DEPOT'))
     add(
       `<line x1="2" y1="${cy}" x2="10" y2="${cy}" stroke="${orange}" stroke-width="1.5"/>` +
       `<rect x="10" y="${cy-3.5}" width="9" height="7" rx="1.5" fill="rgba(245,166,35,.15)" stroke="${orange}" stroke-width="1.2"/>` +
       `<text x="14.5" y="${cy+1}" font-size="4.5px" font-family="'Barlow Condensed',sans-serif" font-weight="700" fill="${orange}" text-anchor="middle">D</text>`,
-      isEN ? 'Depot' : 'Dépôt');
+      T('legendDepot'));
 
   if(has('PR'))
     add(
@@ -957,20 +973,20 @@ function renderSchemaLegend(infra){
     add(
       `<polygon points="10,${cy-5} 17,${cy+4} 3,${cy+4}" fill="white" stroke="#e8453c" stroke-width="2" stroke-linejoin="round"/>` +
       `<line x1="5" y1="${cy+1}" x2="15" y2="${cy+1}" stroke="#111" stroke-width="1"/>`,
-      isEN ? 'Intersection' : 'Carrefour');
+      T('legendIntersection'));
 
   if(has('DEBRANCH_VD'))
     add(
       `<path d="M 8 ${cy-5} C 8 ${cy+1} 21 ${cy+1} 21 ${cy+1}" fill="none" stroke="${purple}" stroke-width="1.5"/>` +
       `<path d="M 13 ${cy-5} C 13 ${cy+3} 21 ${cy+3} 21 ${cy+3}" fill="none" stroke="${purple}" stroke-width="1.5"/>`,
-      isEN ? 'Branch (VD)' : 'Débranchement VD');
+      T('legendBranchVD'));
 
   if(has('AIGUILLE_S'))
     add(
       `<line x1="6" y1="${cy-4}" x2="15" y2="${cy+4}" stroke="${purple}" stroke-width="1.8"/>` +
       `<line x1="6" y1="${cy-3}" x2="6" y2="${cy-6}" stroke="${orange}" stroke-width="2"/>` +
       `<circle cx="6" cy="${cy-3}" r="1.5" fill="${orange}"/>`,
-      isEN ? 'Switch' : 'Aiguillage');
+      T('legendSwitch'));
 
   if(has('TUNNEL'))
     add(
@@ -978,23 +994,23 @@ function renderSchemaLegend(infra){
       `<line x1="13" y1="${cy-5}" x2="13" y2="${cy+5}" stroke="${purple}" stroke-width="1.3" stroke-dasharray="3,2.5"/>` +
       `<path d="M 5 ${cy-5} Q 10.5 ${cy-2} 16 ${cy-5}" fill="none" stroke="#8890aa" stroke-width="1.2"/>` +
       `<path d="M 5 ${cy+5} Q 10.5 ${cy+2} 16 ${cy+5}" fill="none" stroke="#8890aa" stroke-width="1.2"/>`,
-      isEN ? 'Tunnel' : 'Tunnel');
+      T('legendTunnel'));
 
   if(has(['PONT_DESSUS','PONT_DESSOUS']))
     add(
       `<polyline points="2,${cy-5} 5,${cy-2} 16,${cy-2} 19,${cy-5}" fill="none" stroke="#8890aa" stroke-width="1.2"/>` +
       `<polyline points="2,${cy+5} 5,${cy+2} 16,${cy+2} 19,${cy+5}" fill="none" stroke="#8890aa" stroke-width="1.2"/>`,
-      isEN ? 'Bridge' : 'Pont');
+      T('legendBridge'));
 
   if(LINE && LINE.scenarios && LINE.scenarios.some(s=>(s.type||'').toUpperCase()==='SP')){
     add(
       `<rect x="2" y="${cy-3}" width="14" height="6" rx="3" fill="${green}" stroke="${green}" stroke-width="1"/>` +
       `<line x1="18" y1="${cy-5}" x2="18" y2="${cy+2}" stroke="${green}" stroke-width="1.2"/>` +
       `<polygon points="18,${cy-5} 22,${cy-2} 18,${cy+1}" fill="${green}"/>`,
-      isEN ? 'Temp. terminal' : 'Terminus prov.');
+      T('legendTempTerminal'));
     add(
       `<line x1="10" y1="${cy-5}" x2="10" y2="${cy+5}" stroke="${red}" stroke-width="2" stroke-dasharray="4,3"/>`,
-      isEN ? 'Closed section' : 'Hors service');
+      T('legendClosedSection'));
   }
 
   /* ── Rendu HTML flex-wrap ── */
@@ -1025,15 +1041,16 @@ function carouselRender(){
   const counter = document.getElementById('carouselCounter');
   const btnP    = document.getElementById('carouselPrev');
   const btnN    = document.getElementById('carouselNext');
+  if(!track || !empty || !dots) return; // fragment pas encore chargé
   const n = CAROUSEL_SLIDES.length;
 
   if(n === 0){
     track.style.display = 'none';
     empty.style.display = 'flex';
     dots.innerHTML = '';
-    counter.textContent = '';
-    btnP.disabled = true;
-    btnN.disabled = true;
+    if(counter) counter.textContent = '';
+    if(btnP) btnP.disabled = true;
+    if(btnN) btnN.disabled = true;
     return;
   }
   empty.style.display = 'none';
@@ -1210,4 +1227,3 @@ function parseCarouselSheet(wb, imageMap){
     slidesListRender();
   }
 }
-

@@ -211,7 +211,7 @@ function _getTermTooltip() {
 
 function _showTermTooltip(e, hit, termName) {
   const t = _getTermTooltip();
-  const compressLabel = isEN ? '⏹ Adjustable (compressible)' : '⏹ Temps ajustable (compressible)';
+  const compressLabel = T('compTermAdjustable');
 
   t.innerHTML = `
     <!-- En-tête : terminus + total centré -->
@@ -221,7 +221,7 @@ function _showTermTooltip(e, hit, termName) {
       <div style="font-size:1rem;font-weight:800;color:var(--text);font-family:'Barlow Condensed',sans-serif;">
         ${fmtMmSs(hit.totalSec / 60)}
       </div>
-      <div style="font-size:8.5px;color:var(--text3);">${isEN ? 'Total' : 'Temps total'}</div>
+      <div style="font-size:8.5px;color:var(--text3);">${T('compTermTotal')}</div>
     </div>
     <!-- Détail segment survolé -->
     <div style="display:flex;align-items:flex-start;gap:7px;">
@@ -403,7 +403,7 @@ function _renderTerminus3DChart(container, scData, termName, catalog) {
     <div style="width:16px;height:16px;border-radius:2px;border:1px solid var(--border2);
       background:repeating-linear-gradient(-45deg,rgba(180,190,220,.35) 0px,rgba(180,190,220,.35) 2px,transparent 2px,transparent 6px);
       flex-shrink:0;"></div>
-    ${isEN ? 'Adjustable (compressible)' : 'Temps compressible (ajustable)'}`;
+    ${T('compTermAdjShort')}`;
   leg.appendChild(compEl);
   container.appendChild(leg);
 }
@@ -464,7 +464,7 @@ function renderCompTerminus(all) {
     <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.55rem;">
       <div class="col-picker-wrap">
         <button class="col-picker-btn" onclick="_toggleTermPicker(event,'_tcp2')">
-          ⚙ ${isEN ? 'Scenarios' : 'Scénarios'} ▾
+          ⚙ ${T('compTermScenarios')} ▾
         </button>
         <div class="col-picker-dropdown" id="_tcp2">${scOpts}</div>
       </div>

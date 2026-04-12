@@ -110,8 +110,8 @@ function buildTermImgSingle(imgName, labelDir){
   if(!imgName){
     return `<div class="term-img-placeholder">
       <div class="term-img-placeholder-icon">🗺</div>
-      <div class="term-img-placeholder-text">${isEN ? 'No image defined' : 'Aucune image définie'}</div>
-      <div class="term-img-placeholder-hint">${isEN ? 'Add TER_A / TER_R column in SCENARIOS sheet' : 'Ajoutez la colonne TER_A / TER_R dans la feuille SCENARIOS'}</div>
+      <div class="term-img-placeholder-text">${T('termNoImgDefined')}</div>
+      <div class="term-img-placeholder-hint">${T('termNoImgHint')}</div>
     </div>`;
   }
   /* Recherche insensible à la casse dans GLOBAL_IMAGE_MAP */
@@ -123,7 +123,7 @@ function buildTermImgSingle(imgName, labelDir){
   if(!src){
     return `<div class="term-img-placeholder">
       <div class="term-img-placeholder-icon">🗺</div>
-      <div class="term-img-placeholder-text">${isEN ? 'Image not found in ZIP' : 'Image introuvable dans le ZIP'}</div>
+      <div class="term-img-placeholder-text">${T('termImgNotFound')}</div>
       <div class="term-img-placeholder-hint"><code>${imgName}</code></div>
     </div>`;
   }
@@ -131,8 +131,8 @@ function buildTermImgSingle(imgName, labelDir){
 }
 
 /* ─── Labels des 3 phases (position dans ret.params) ─── */
-const TERM_PHASE_LABELS_FR = ['Quai Départ','Av./Arr. Gare','Quai Arrivée'];
-const TERM_PHASE_LABELS_EN = ['Departure Platform','Station Yard','Arrival Platform'];
+// TERM_PHASE_LABELS_* remplacés par T() dans OCC_KEYS
+
 
 /* ANCIENNE fonction conservée pour compatibilité — plus utilisée directement */
 function buildTermHistoSVG(termList){
@@ -284,7 +284,7 @@ function renderTerminus(){
   const sc      = LINE.scenarios[currentSc];
   const termSc  = getTerminusForSc(currentSc);
   const freqRef = refFreqHP();
-  const phaseLbls = isEN ? TERM_PHASE_LABELS_EN : TERM_PHASE_LABELS_FR;
+  const phaseLbls = [T('termPhaseDeparture'), T('termPhaseYard'), T('termPhaseArrival')];
 
   /* Noms d'images issus de la feuille SCENARIOS */
   const imgNameA = sc.terA || '';
@@ -309,7 +309,7 @@ function renderTerminus(){
     addTerm(termSc.termR, T('termDirR'), termSc.retR, imgNameR);
   }
 
-  const imgTitleLbl   = isEN ? 'Terminus diagram' : 'Schéma terminus';
+  const imgTitleLbl   = T('termDiagram');
 
   /* Construit une ligne complète pour un terminus */
   const buildRow = ({nom, dir, ret, imgName}) => {
@@ -345,12 +345,13 @@ function renderTerminus(){
 
     /* 3 mini histogrammes — regroupement par valeur de la colonne Occ */
     const OCC_KEYS = [
-      { match: ['arrivées','arrivees','arrivée','arrivee'], fr:'Quai Arrivée',        en:'Arrival Platform'   },
-      { match: ['retournement','manœuvre','manoeuvre'],      fr:'Retournement',         en:'Station Yard'       },
-      { match: ['départ','depart'],                          fr:'Quai Départ',          en:'Departure Platform' },
+      { match: ['arrivées','arrivees','arrivée','arrivee'], key:'termPhaseArrival'   },
+      { match: ['retournement','manœuvre','manoeuvre'],      key:'termPhaseYard'      },
+      { match: ['départ','depart'],                          key:'termPhaseDeparture' },
     ];
-    const histos = OCC_KEYS.map(({match, fr, en}) => {
-      const title = isEN ? en : fr;
+    const histos = OCC_KEYS.map((item) => {
+      const match = item.match;
+      const title = T(item.key);
       const filtered = ret.params.filter(p => match.includes((p.occ||p.label||'').toLowerCase().trim()));
       const sec = filtered.reduce((a,p)=>a+p.sec, 0);
       /* fallback si aucune Occ définie : on prend tous les params pour le 1er graphique */
@@ -391,4 +392,3 @@ function renderTerminus(){
     ${termList.map((t,i) => (i>0?'<hr class="term-row-sep">':'')+buildRow(t)).join('')}
   </div>`;
 }
-

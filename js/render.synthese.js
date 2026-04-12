@@ -122,7 +122,7 @@ function _buildSVG(sc, scIdx, k) {
   const nomLigne   = meta.nomLigne  || 'LIGNE';
   const etude      = meta.etude     || '';
   const scLabel    = (sc.label || `Scénario ${scIdx + 1}`).toUpperCase();
-  const dateStr    = new Date().toLocaleDateString('fr-FR');
+  const dateStr    = new Date().toLocaleDateString(isEN ? 'en-GB' : 'fr-FR');
   const clientName = meta.client     || 'CLIENT';
   const entreprise = meta.entreprise || 'ARTELIA';
 

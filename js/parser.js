@@ -10,10 +10,17 @@ let BRAND = {
 };
 
 /* ── parser.js — Lecture xlsx, construction LINE, KPIs ── */
+
 /* ═══════════════════════════════════════════════
-   DONNÉES INITIALES (ligne Dijon T3)
+   CONSTANTES MÉTIER
 ═══════════════════════════════════════════════ */
-// LINE declared in core.js
+/* Coefficient de réserve flotte (ex: 1.15 = 15% de véhicules en réserve).
+   TODO: rendre configurable via le panneau Settings. */
+const RESERVE_COEFF = 1.15;
+
+/* Variables globales implicites — déclarées ici pour clarté */
+let MT_IMAGES            = {};  // images marche type chargées depuis ZIP
+let chargeActiveScenarios = null; // scénarios actifs dans le serpent de charge
 
 /* ═══════════════════════════════════════════════
    HELPERS
@@ -125,776 +132,13 @@ function handleFile(file, slot){
     const statusId = slot === 'ref' ? 'importStatusRef' : 'importStatus';
     const progWrap = document.getElementById(slot === 'ref' ? 'importProg2' : 'importProg1');
     if(progWrap) progWrap.style.display = 'flex';
-    _importSetProgress(slot, 0, '⚠ Format non supporté — importez un fichier .zip', 'var(--orange)');
+    _importSetProgress(slot, 0, T('importFormat'), 'var(--orange)');
     return;
   }
   handleZip(file, slot);
 }
 
-/* ── Stack cycle bar hover ── */
-function stackSegEnter(el, evt){
-  el.style.filter = 'brightness(1.2) saturate(1.3)';
-  const tt  = document.getElementById('pieTooltip');
-  const col = el.dataset.col;
-  tt.style.background = col;
-  document.getElementById('ptIcon').textContent  = el.dataset.icon;
-  document.getElementById('ptLabel').textContent = el.dataset.label;
-  document.getElementById('ptVal').textContent   = el.dataset.val;
-  document.getElementById('ptPct').textContent   = el.dataset.pct + ' %';
-  tt.style.display = 'block';
-  _movePieTooltip(evt);
-  el.addEventListener('mousemove', _movePieTooltip);
-}
-function stackSegLeave(el){
-  el.style.filter = '';
-  document.getElementById('pieTooltip').style.display = 'none';
-  el.removeEventListener('mousemove', _movePieTooltip);
-}
-
-function clockSliceEnter(el, evt){
-  el.style.opacity = '1';
-  el.style.filter = 'brightness(1.25)';
-  const tt  = document.getElementById('pieTooltip');
-  const col = el.dataset.col;
-  tt.style.background = col;
-  document.getElementById('ptIcon').textContent  = '🕐';
-  document.getElementById('ptLabel').textContent = el.dataset.label;
-  document.getElementById('ptVal').textContent   = el.dataset.hours;
-  document.getElementById('ptPct').textContent   = el.dataset.freq;
-  tt.style.display = 'block';
-  _movePieTooltip(evt);
-  el.addEventListener('mousemove', _movePieTooltip);
-}
-function clockSliceLeave(el){
-  el.style.opacity = el.dataset.op || '.80';
-  el.style.filter  = '';
-  document.getElementById('pieTooltip').style.display = 'none';
-  el.removeEventListener('mousemove', _movePieTooltip);
-}
-
-/* ── Pie chart interactivity ── */
-function pieSliceEnter(el, evt){
-  // Grossit la portion
-  el.style.transform = 'scale(1.08)';
-  el.style.opacity   = '1';
-  // Rempli le tooltip
-  const tt   = document.getElementById('pieTooltip');
-  const col  = el.dataset.col;
-  tt.style.background = col;
-  document.getElementById('ptIcon').textContent = el.dataset.icon;
-  document.getElementById('ptLabel').textContent = el.dataset.label;
-  document.getElementById('ptVal').textContent   = el.dataset.val;
-  document.getElementById('ptPct').textContent   = el.dataset.pct + ' %';
-  tt.style.display = 'block';
-  _movePieTooltip(evt);
-  el.addEventListener('mousemove', _movePieTooltip);
-}
-function pieSliceLeave(el){
-  el.style.transform = '';
-  el.style.opacity   = '.9';
-  document.getElementById('pieTooltip').style.display = 'none';
-  el.removeEventListener('mousemove', _movePieTooltip);
-}
-function _movePieTooltip(evt){
-  const tt = document.getElementById('pieTooltip');
-  const W = tt.offsetWidth || 160, H = tt.offsetHeight || 70;
-  let x = evt.clientX + 14, y = evt.clientY - H/2;
-  if(x + W > window.innerWidth  - 8) x = evt.clientX - W - 14;
-  if(y < 8) y = 8;
-  if(y + H > window.innerHeight - 8) y = window.innerHeight - H - 8;
-  tt.style.left = x + 'px';
-  tt.style.top  = y + 'px';
-}
-
-/* ── Fullscreen overlay ── */
-function openFullscreen(title, renderFn){
-  const ov   = document.getElementById('fsOverlay');
-  const body = document.getElementById('fsBody');
-  document.getElementById('fsTitle').textContent = title;
-  body.innerHTML = '';
-  renderFn(body);
-  ov.style.display = 'flex';
-  requestAnimationFrame(() => ov.classList.add('open'));
-  document.addEventListener('keydown', _fsKeyHandler);
-}
-function closeFullscreen(){
-  const ov = document.getElementById('fsOverlay');
-  ov.classList.remove('open');
-  setTimeout(() => { ov.style.display='none'; document.getElementById('fsBody').innerHTML=''; }, 200);
-  document.removeEventListener('keydown', _fsKeyHandler);
-}
-function _fsKeyHandler(e){ if(e.key==='Escape') closeFullscreen(); }
-
-function fsOpenMarcheType(){
-  // Cas 1 : graphique CSV → plein écran via render.marche.js
-  const canvas = document.getElementById('mtCanvas');
-  if(canvas && canvas.style.display !== 'none' && typeof fsOpenMarcheTypeCanvas === 'function'){
-    fsOpenMarcheTypeCanvas(canvas); return;
-  }
-  // Cas 2 : image PNG (comportement original)
-  const img = document.getElementById('mtImg');
-  if(!img || !img.src || img.style.display==='none') return;
-  openFullscreen(document.getElementById('mtLabel').textContent, body => {
-    Object.assign(body.style, {overflow:'auto', alignItems:'flex-start', justifyContent:'center', padding:'1rem'});
-    const i = document.createElement('img');
-    i.src = img.src; i.alt = 'Marche type';
-    i.style.cssText = 'max-width:100%;height:auto;display:block;margin:auto;';
-    body.appendChild(i);
-  });
-}
-
-function fsOpenSchema(){
-  const svg = document.getElementById('schemaSvg');
-  const tableBody = document.getElementById('tableBody');
-  if(!svg || !svg.innerHTML) return;
-  openFullscreen(isEN ? 'Line diagram' : 'Schéma de ligne', body => {
-    Object.assign(body.style, {overflow:'auto', padding:'0', alignItems:'flex-start', justifyContent:'flex-start'});
-
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;align-items:flex-start;width:100%;min-height:100%;';
-
-    // Colonne schéma — hauteur naturelle, pas de scroll
-    const schemaCol = document.createElement('div');
-    schemaCol.style.cssText = 'flex-shrink:0;width:clamp(160px,14vw,240px);border-right:1px solid var(--border);display:flex;flex-direction:column;';
-
-    // ── Boutons Aller / Retour (3.4 / 3.5) ──────────────────────────
-    // Cloner les boutons pour que le SVG s'aligne correctement (HEAD_H tient
-    // compte de DIR_OFFSET en mode normal — on doit reproduire la même hauteur).
-    const dirBtnsOrig = document.querySelector('.schema-dir-btns');
-    if(dirBtnsOrig){
-      const dirClone = dirBtnsOrig.cloneNode(true);
-      // Supprimer le bouton plein-écran du clone (inutile et déjà en plein écran)
-      const fsBtn = dirClone.querySelector('.schema-fs-btn-top');
-      if(fsBtn) fsBtn.remove();
-      // Supprimer les IDs dupliqués et rewirer les onclick
-      const btnA = dirClone.querySelector('#dirBtnA');
-      const btnR = dirClone.querySelector('#dirBtnR');
-      if(btnA){
-        btnA.removeAttribute('id');
-        btnA.classList.toggle('active', currentDir === 'aller');
-        btnA.onclick = () => {
-          setDirection('aller');
-          // Mettre à jour l'état actif dans les deux boutons du clone
-          dirClone.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
-          btnA.classList.add('active');
-        };
-      }
-      if(btnR){
-        btnR.removeAttribute('id');
-        btnR.classList.toggle('active', currentDir === 'retour');
-        btnR.onclick = () => {
-          setDirection('retour');
-          dirClone.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
-          btnR.classList.add('active');
-        };
-      }
-      // Supprimer les IDs dupliqués des labels
-      dirClone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-      schemaCol.appendChild(dirClone);
-    }
-
-    // ── SVG cloné ───────────────────────────────────────────────────
-    const svgClone = svg.cloneNode(true);
-    svgClone.style.cssText = 'display:block;width:100%;';
-    schemaCol.appendChild(svgClone);
-
-    // Colonne tableau
-    const tableCol = document.createElement('div');
-    tableCol.style.cssText = 'flex:1;overflow-x:auto;';
-    if(tableBody){
-      const tbl = tableBody.closest('table');
-      if(tbl){
-        const tblClone = tbl.cloneNode(true);
-        tblClone.style.cssText = 'width:100%;';
-        tableCol.appendChild(tblClone);
-      }
-    }
-
-    wrap.appendChild(schemaCol);
-    wrap.appendChild(tableCol);
-    body.appendChild(wrap);
-  });
-}
-
-function fsOpenRadar(){
-  if(!LINE) return;
-  openFullscreen(document.getElementById('compRadarTitle').textContent, body => {
-    Object.assign(body.style, {alignItems:'center', justifyContent:'center'});
-    const fsW = Math.min(window.innerWidth - 40, 900);
-    const fsH = Math.min(window.innerHeight - 80, 860);
-    const wrap = document.createElement('div');
-    wrap.style.cssText = `width:${fsW}px;height:${fsH}px;`;
-    const canvasFs = document.createElement('canvas');
-    canvasFs.style.cssText = 'display:block;width:100%;';
-    wrap.appendChild(canvasFs);
-    body.appendChild(wrap);
-    requestAnimationFrame(() => {
-      const orig = document.getElementById('radarCanvas');
-      if (orig) orig.id = '_radarCanvas_bak';
-      canvasFs.id = 'radarCanvas';
-      renderRadar(_lastRadarAll, _lastRadarFiltered);
-      canvasFs.id = '_radarCanvasFs';
-      const bak = document.getElementById('_radarCanvas_bak');
-      if (bak) bak.id = 'radarCanvas';
-    });
-  });
-}
-
-function fsOpenBubble() {
-  if (!LINE) return;
-  openFullscreen(document.getElementById('compBubbleTitle').textContent, body => {
-    Object.assign(body.style, {
-      overflow: 'hidden',
-      padding: '0',
-      display: 'flex',
-      flexDirection: 'row',
-      alignItems: 'stretch',
-    });
-
-    const availH = window.innerHeight - 62;
-
-    const axisL = document.createElement('canvas');
-    axisL.id = 'chargeAxisCanvas_fs';
-    axisL.style.cssText = 'flex-shrink:0;display:block;';
-
-    const scrollWrap = document.createElement('div');
-    scrollWrap.style.cssText = `flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;height:${availH}px;`;
-
-    const c2 = document.createElement('canvas');
-    c2.id = 'bubbleCanvasFs';
-    c2.style.cssText = `display:block;height:${availH}px;`;
-
-    scrollWrap.appendChild(c2);
-    body.appendChild(axisL);
-    body.appendChild(scrollWrap);
-
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const oldL = document.getElementById('chargeAxisCanvas');
-      if (oldL) oldL.id = '_chargeAxisCanvas_bak';
-      axisL.id = 'chargeAxisCanvas';
-
-      renderBubbleChartOnCanvas(c2, null, availH,
-        window._lastBubbleAll || [], window._lastBubbleSc ?? 0);
-
-      axisL.id = 'chargeAxisCanvas_fs';
-      if (oldL) oldL.id = 'chargeAxisCanvas';
-    }));
-  });
-}
-
-function fsOpenTermImg(imgName, labelDir){
-  const lc  = imgName.toLowerCase();
-  const src = GLOBAL_IMAGE_MAP[imgName]
-    || Object.entries(GLOBAL_IMAGE_MAP).find(([k])=>k.toLowerCase()===lc)?.[1] || null;
-  if(!src) return;
-  openFullscreen(labelDir, body => {
-    Object.assign(body.style, {overflow:'auto', alignItems:'center', justifyContent:'center'});
-    const img = document.createElement('img');
-    img.src = src; img.alt = labelDir;
-    img.style.cssText = 'max-width:100%;max-height:calc(100vh - 80px);object-fit:contain;display:block;';
-    body.appendChild(img);
-  });
-}
-
-/* ── Gantt d'occupation des voies du terminus ── */
-function buildTermGantt(ret, nom){
-  if(!ret || !ret.params || !ret.params.length) return '';
-
-  const sc       = LINE && LINE.scenarios[currentSc];
-  const freqMin  = sc ? (sc.freqHP || sc.freqMin || 6) : 6;
-  const freqSec  = freqMin * 60;
-  const axisStepMin = (()=>{ const el=document.getElementById('settGanttStep'); return el?(parseInt(el.value)||5):5; })();
-  const col      = BRAND.primaire2 || '#3ecf6a';
-
-  const sorted = [...ret.params].sort((a,b)=>{
-    if(a.ordre!=null&&b.ordre!=null) return a.ordre-b.ordre; return 0;
-  });
-
-  const seqSec   = sorted.reduce((a,p)=>a+p.sec, 0);
-  const durationSec = 3600;
-  const voiesSet = [...new Set(sorted.map(p=>(p.voie||'').trim()||p.label))];
-
-  // Build slots for one sequence starting at offsetSec
-  const buildSeq = (offsetSec, trainIdx) => {
-    const slots = [];
-    let cursor = offsetSec;
-    sorted.forEach(p => {
-      const voie = (p.voie||'').trim()||p.label;
-      slots.push({voie, start:cursor, end:cursor+p.sec, label:p.label, sec:p.sec, trainIdx});
-      cursor += p.sec;
-    });
-    return slots;
-  };
-
-  // All trains over 1h
-  const trains = [];
-  for(let t=0, idx=0; t<durationSec; t+=freqSec, idx++)
-    trains.push(buildSeq(t, idx));
-
-  // ── Per-voie conflict detection ──
-  // For each voie, find the time range occupied by each train
-  // Conflict if train[i] ends on voie V after train[i+1] starts on voie V
-  const voieConflictZones = {}; // voie → [{start,end}]
-  const voieHasConflict   = {}; // voie → bool
-  voiesSet.forEach(voie => {
-    voieConflictZones[voie] = [];
-    voieHasConflict[voie]   = false;
-    for(let i=0; i<trains.length-1; i++){
-      const curSlots  = trains[i].filter(s=>s.voie===voie);
-      const nextSlots = trains[i+1].filter(s=>s.voie===voie);
-      if(!curSlots.length || !nextSlots.length) continue;
-      const curEnd   = Math.max(...curSlots.map(s=>s.end));
-      const nextStart= Math.min(...nextSlots.map(s=>s.start));
-      if(curEnd > nextStart && nextStart < durationSec){
-        voieConflictZones[voie].push({start:nextStart, end:Math.min(curEnd, durationSec)});
-        voieHasConflict[voie] = true;
-      }
-    }
-  });
-
-  const anyConflict = Object.values(voieHasConflict).some(Boolean);
-
-  // Dimensions
-  const availPx  = Math.max(600, (window.innerWidth||1400)-320);
-  const CELL     = availPx / durationSec;
-  const toX      = sec => sec * CELL;
-  const LABEL_W  = 80;
-  const PCT_W    = 46;
-  const ROW_MAIN = 20;
-  const ROW_SUB  = 15;
-  const HEADER_H = 26;
-
-  // Occupation per voie
-  const voieOccup = {};
-  voiesSet.forEach(v=>{ voieOccup[v]=0; });
-  trains.forEach(slots => slots.forEach(s=>{
-    const dur = Math.min(s.end,durationSec)-Math.max(s.start,0);
-    if(dur>0) voieOccup[s.voie]=(voieOccup[s.voie]||0)+dur;
-  }));
-
-  // Ticks
-  const tickStepSec = axisStepMin*60;
-  const ticks=[];
-  for(let s=0; s<=durationSec; s+=tickStepSec) ticks.push(s);
-
-  // Header ticks + global conflict markers on axis (union of all voie conflicts)
-  const allConflictZones = [];
-  voiesSet.forEach(v => voieConflictZones[v].forEach(z => allConflictZones.push(z)));
-
-  const headerTicks = ticks.map(s=>{
-    const min=Math.floor(s/60), sec2=s%60;
-    const lbl=sec2?`${min}:${String(sec2).padStart(2,'0')}`:`${min}min`;
-    return `<div style="position:absolute;left:${toX(s).toFixed(1)}px;top:0;display:flex;flex-direction:column;align-items:center;">
-      <div style="width:1px;height:10px;background:var(--border);"></div>
-      <div style="font-size:7px;font-weight:700;color:var(--text2);font-family:var(--fontb);transform:translateX(-50%);white-space:nowrap;margin-top:1px;">${lbl}</div>
-    </div>`;
-  }).join('');
-
-  const conflictMarkers = allConflictZones.map(z=>
-    `<div style="position:absolute;left:${toX(z.start).toFixed(1)}px;top:0;width:${toX(z.end-z.start).toFixed(1)}px;height:100%;pointer-events:none;">
-      <div style="position:absolute;left:0;top:2px;font-size:9px;">⚠️</div>
-    </div>`
-  ).join('');
-
-  // Rows per voie
-  const rows = voiesSet.map(voie => {
-    const pct     = Math.round((voieOccup[voie]||0)/durationSec*100);
-    const pctCol  = occColorHex(Math.min(pct,100));
-    const hasC    = voieHasConflict[voie];
-    const cZones  = voieConflictZones[voie];
-    const rowH    = hasC ? ROW_MAIN + ROW_SUB + 2 : ROW_MAIN;
-
-    const vticks = ticks.map(s=>
-      `<div style="position:absolute;left:${toX(s).toFixed(1)}px;top:0;width:1px;height:100%;background:var(--border);opacity:.2;"></div>`
-    ).join('');
-
-    const cZoneBg = cZones.map(z=>
-      `<div style="position:absolute;left:${toX(z.start).toFixed(1)}px;top:0;width:${toX(z.end-z.start).toFixed(1)}px;height:100%;background:#ef444418;"></div>`
-    ).join('');
-
-    // Get slots for this voie grouped by train, assign sub-line by alternating trainIdx
-    const voieSlots = trains.flatMap(t=>t).filter(s=>s.voie===voie&&s.start<durationSec);
-
-    const segHtml = voieSlots.map(s=>{
-      // Sub-line: alternate by trainIdx (0,2,4=top; 1,3,5=bottom)
-      const subLine = hasC ? (s.trainIdx % 2) : 0;
-      const yTop    = subLine===0 ? 1 : ROW_MAIN + 2;
-      const segH    = subLine===0 ? ROW_MAIN-2 : ROW_SUB-2;
-
-      // Is this slot in a conflict zone for this voie?
-      const inConflict = cZones.some(z=>s.start<z.end&&s.end>z.start);
-      const segCol = inConflict ? '#ef4444' : col;
-      const x = toX(s.start).toFixed(1);
-      const w = Math.max(1, toX(Math.min(s.end,durationSec)-s.start)-0.5).toFixed(1);
-
-      return `<div style="position:absolute;left:${x}px;top:${yTop}px;width:${w}px;height:${segH}px;
-        background:${segCol};opacity:${inConflict?'.9':'.82'};border-radius:2px;cursor:pointer;"
-        data-label="${s.label}"
-        data-total="${secToStr(s.sec)}"
-        data-start="${Math.floor(s.start/60)}min${String(s.start%60).padStart(2,'0')}s"
-        data-end="${Math.floor(Math.min(s.end,durationSec)/60)}min${String(Math.min(s.end,durationSec)%60).padStart(2,'0')}s"
-        data-col="${segCol}"
-        onmouseenter="ganttSegEnter(this,event)" onmouseleave="ganttSegLeave(this)"></div>`;
-    }).join('');
-
-    return `<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--border);">
-      <div style="width:${LABEL_W}px;flex-shrink:0;font-size:.52rem;font-family:var(--fontb);font-weight:800;
-        color:var(--text);padding:0 .4rem;display:flex;align-items:center;border-right:1px solid var(--border);">${voie}</div>
-      <div style="position:relative;width:${toX(durationSec).toFixed(1)}px;flex-shrink:0;height:${rowH}px;background:var(--bg4);">
-        ${vticks}${cZoneBg}${segHtml}
-      </div>
-      <div style="width:${PCT_W}px;flex-shrink:0;font-size:.6rem;font-weight:800;color:${pctCol};
-        font-family:var(--fontb);display:flex;align-items:center;justify-content:center;border-left:1px solid var(--border);">${pct}%</div>
-    </div>`;
-  }).join('');
-
-  const totalW  = LABEL_W + toX(durationSec) + PCT_W;
-  const ganttId = 'gantt_'+nom.replace(/[^a-z0-9]/gi,'_');
-
-  const conflictBanner = anyConflict
-    ? `<div style="display:flex;align-items:center;gap:.4rem;background:#ef444418;border:1px solid #ef444444;
-        border-radius:4px;padding:.2rem .5rem;margin-bottom:.35rem;font-size:.52rem;font-family:var(--fontb);color:#ef4444;">
-        ⚠️ ${isEN?'Conflict':'Conflit'} : séquence ${Math.round(seqSec/60*10)/10}min › fréquence ${freqMin}min
-       </div>`
-    : '';
-
-  const header = `<div style="display:flex;border-bottom:2px solid var(--border);">
-    <div style="width:${LABEL_W}px;flex-shrink:0;border-right:1px solid var(--border);"></div>
-    <div style="position:relative;width:${toX(durationSec).toFixed(1)}px;flex-shrink:0;height:${HEADER_H}px;">
-      ${headerTicks}${conflictMarkers}
-    </div>
-    <div style="width:${PCT_W}px;flex-shrink:0;font-size:6px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-      color:var(--text3);font-family:var(--fontb);display:flex;align-items:flex-end;justify-content:center;
-      padding-bottom:3px;border-left:1px solid var(--border);">Occ.</div>
-  </div>`;
-
-  return `<div class="term-gantt-wrap" id="${ganttId}">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
-      <div class="term-gantt-title" style="margin:0;">${isEN?'Track occupancy':'Occupation des voies'} — ${nom}</div>
-      <div style="display:flex;align-items:center;gap:.4rem;">
-        <div style="font-size:.43rem;color:var(--text3);font-family:var(--fontb);">f=${freqMin}min · séq=${Math.round(seqSec/60*10)/10}min</div>
-        <button class="fs-btn" onclick="fsOpenGantt('${ganttId.replace(/'/g,"\\'")}','${nom.replace(/'/g,"\\'")}')">⛶</button>
-      </div>
-    </div>
-    ${conflictBanner}
-    <div style="overflow-x:auto;">
-      <div style="min-width:${totalW.toFixed(0)}px;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
-        ${header}${rows}
-      </div>
-    </div>
-  </div>`;
-}
-
-function ganttSegEnter(el, evt){
-  el.style.opacity = '1';
-  el.style.filter  = 'brightness(1.25)';
-  const tt = document.getElementById('pieTooltip');
-  tt.style.background = el.dataset.col;
-  document.getElementById('ptIcon').textContent  = '🚉';
-  document.getElementById('ptLabel').textContent = el.dataset.label;
-  document.getElementById('ptVal').textContent   = el.dataset.total;
-  document.getElementById('ptPct').textContent   = el.dataset.start + ' → ' + el.dataset.end;
-  tt.style.display = 'block';
-  _movePieTooltip(evt);
-  el.addEventListener('mousemove', _movePieTooltip);
-}
-function ganttSegLeave(el){
-  el.style.opacity = '.82';
-  el.style.filter  = '';
-  document.getElementById('pieTooltip').style.display = 'none';
-  el.removeEventListener('mousemove', _movePieTooltip);
-}
-
-/* ── Fullscreen Gantt ── */
-function fsOpenGantt(ganttId, nom){
-  const el = document.getElementById(ganttId);
-  if(!el) return;
-  openFullscreen((isEN?'Track occupancy':'Occupation des voies') + ' — ' + nom, body => {
-    Object.assign(body.style, {overflow:'auto', alignItems:'flex-start', padding:'1rem'});
-    const clone = el.cloneNode(true);
-    clone.style.cssText = 'width:100%;';
-    // Remove fs-btn from clone to avoid nested buttons
-    clone.querySelectorAll('.fs-btn').forEach(b=>b.remove());
-    body.appendChild(clone);
-  });
-}
-
-function fsOpenTermHisto(svgHtml, title){
-  openFullscreen(title, body => {
-    Object.assign(body.style, {alignItems:'center', justifyContent:'center'});
-    const fsW = Math.min(window.innerWidth - 60, 1400);
-    const wrap = document.createElement('div');
-    wrap.style.cssText = `width:${fsW}px;`;
-    wrap.innerHTML = svgHtml;
-    const svg = wrap.querySelector('svg');
-    if(svg){
-      // Conserve le viewBox original pour une résolution parfaite
-      const vb = svg.getAttribute('viewBox') || '0 0 220 140';
-      svg.setAttribute('viewBox', vb);
-      svg.style.cssText = 'width:100%;height:auto;display:block;';
-    }
-    body.appendChild(wrap);
-  });
-}
-
-/* ── OpenStreetMap (Leaflet) ── */
-let _map = null;
-let _lastRadarAll = [], _lastRadarFiltered = [];
-let _mapTileType = 'standard';
-let _mapTileObj  = null;
-
-const _MAP_TILES = {
-  standard:  { url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr:'© OpenStreetMap' },
-  satellite: { url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr:'© Esri' },
-  transport: { url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attr:'© CartoDB' },
-};
-
-function setMapTile(type){
-  _mapTileType = type;
-  document.querySelectorAll('.map-tile-btn').forEach(b=>b.classList.toggle('active',b.dataset.tile===type));
-  if(!_map) return;
-  if(_mapTileObj){ _map.removeLayer(_mapTileObj); }
-  const t = _MAP_TILES[type]||_MAP_TILES.standard;
-  _mapTileObj = L.tileLayer(t.url,{maxZoom:19,attribution:t.attr}).addTo(_map);
-}
-
-let _mapLayers = {route: null, markers: null, geojson: null};
-let _mapGeoJSON = null;
-
-function initMap(){
-  if(_map) return;
-  const el = document.getElementById('osmMap');
-  if(!el) return;
-  el.innerHTML = '';
-  _map = L.map('osmMap', {zoomControl:true, attributionControl:true});
-  const _t = _MAP_TILES[_mapTileType]||_MAP_TILES.standard;
-  _mapTileObj = L.tileLayer(_t.url,{maxZoom:19,attribution:_t.attr}).addTo(_map);
-  _map.setView([46.5, 2.3], 6);
-}
-function renderMap(){
-  initMap();
-  const col  = BRAND.primaire1 || '#a06bff';
-  const col2 = BRAND.aller     || '#4a9eff';
-
-  // Nettoie les couches précédentes
-  ['route','markers','geojson'].forEach(k => {
-    if(_mapLayers[k]){ _map.removeLayer(_mapLayers[k]); _mapLayers[k]=null; }
-  });
-
-  // ── 1. GeoJSON tracé précis (depuis ZIP) ──────────────────────────
-  if(_mapGeoJSON){
-    _mapLayers.geojson = L.geoJSON(_mapGeoJSON, {
-      style: f => f.geometry.type === 'LineString'
-        ? { color: col, weight: 5, opacity: .9 }
-        : {},
-      pointToLayer: (f, latlng) => {
-        const isT = f.properties.type === 'terminus';
-        return L.circleMarker(latlng, {
-          radius: isT ? 9 : 6,
-          fillColor: isT ? col : '#fff',
-          color: col, weight: 2.5, opacity: 1,
-          fillOpacity: isT ? 1 : .95
-        });
-      },
-      onEachFeature: (f, layer) => {
-        if(f.properties.name) layer.bindTooltip(f.properties.name, {
-          permanent: false, direction: 'top', className: 'map-tooltip'
-        });
-      }
-    }).addTo(_map);
-    _map.fitBounds(_mapLayers.geojson.getBounds(), {padding:[28,28]});
-  }
-
-  // ── 2. Stations depuis LAT/LON dans la feuille STATIONS ───────────
-  if(!LINE || !LINE.stations || !LINE.stations.length) return;
-
-  const pts = LINE.stations.map(s => {
-    const lat = parseFloat(s.lat||s.latitude||s.LAT||'');
-    const lon = parseFloat(s.lon||s.lng||s.longitude||s.LON||'');
-    return (!isNaN(lat)&&!isNaN(lon)) ? {lat,lon,nom:s.nom} : null;
-  }).filter(Boolean);
-
-  if(!pts.length){
-    if(!_mapGeoJSON){
-      document.getElementById('osmMap').innerHTML =
-        `<div class="map-no-data"><div class="map-no-data-icon">📍</div>
-         <div>${isEN?'Add LAT/LON columns in STATIONS sheet or a trace.geojson in ZIP':'Ajoutez LAT/LON dans la feuille STATIONS ou un fichier trace.geojson dans le ZIP'}</div></div>`;
-    }
-    return;
-  }
-
-  const latlngs = pts.map(p => [p.lat, p.lon]);
-
-  // Tracé uniquement si pas déjà un GeoJSON
-  if(!_mapGeoJSON){
-    _mapLayers.route = L.polyline(latlngs, {color:col, weight:4, opacity:.85}).addTo(_map);
-  }
-
-  // Marqueurs stations
-  const group = L.layerGroup();
-  pts.forEach((p, i) => {
-    const isT = (i===0 || i===pts.length-1);
-    L.circleMarker([p.lat,p.lon], {
-      radius: isT ? 8 : 5,
-      fillColor: isT ? col : '#fff',
-      color: col, weight:2, opacity:1, fillOpacity: isT ? 1 : .9
-    }).bindTooltip(p.nom, {permanent:false, direction:'top', className:'map-tooltip'})
-      .addTo(group);
-  });
-  _mapLayers.markers = group.addTo(_map);
-
-  if(!_mapGeoJSON && _mapLayers.route)
-    _map.fitBounds(_mapLayers.route.getBounds(), {padding:[24,24]});
-}
-
-function fsOpenSP(){
-  const card = document.querySelector('.comp-sp-card');
-  if(!card) return;
-  openFullscreen(document.getElementById('compSPTitle').textContent, body => {
-    Object.assign(body.style, {alignItems:'flex-start', padding:'1.5rem', overflow:'auto'});
-    const container = document.getElementById('spMatrixContainer') || card;
-    const clone = container.cloneNode(true);
-    clone.style.cssText = 'width:auto;overflow:visible;';
-    // Remove any max-height restrictions
-    clone.querySelectorAll('*').forEach(el=>{
-      if(el.style.maxHeight) el.style.maxHeight='none';
-      if(el.style.overflow==='auto'||el.style.overflow==='scroll') el.style.overflow='visible';
-    });
-    body.appendChild(clone);
-  });
-}
-
-function fsOpenCompTable(){
-  const tbl = document.getElementById('compTable');
-  if(!tbl) return;
-  openFullscreen(document.getElementById('compTableTitle').textContent, body => {
-    Object.assign(body.style, {overflow:'auto', alignItems:'flex-start', padding:'1.5rem', flexDirection:'column'});
-    // Col picker in fullscreen
-    const pickerWrap = document.createElement('div');
-    pickerWrap.style.cssText = 'display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;align-self:flex-end;';
-    pickerWrap.innerHTML = `<span style="font-size:.6rem;color:var(--text3);font-family:var(--fontb);">Colonnes visibles :</span>`
-      + ALL_COMP_COLS.map((col,i)=>
-        `<label style="display:flex;align-items:center;gap:.25rem;font-size:.6rem;color:var(--text2);cursor:pointer;font-family:var(--fontb);">
-          <input type="checkbox" ${col.visible?'checked':''} style="accent-color:var(--blue);"
-            onchange="ALL_COMP_COLS[${i}].visible=this.checked; renderCompTable(window._lastCompAll||[]); const t=document.getElementById('compTable'); if(t) document.getElementById('fsTblWrap').innerHTML=''; document.getElementById('fsTblWrap').appendChild(t.cloneNode(true));">
-          ${col.label}
-        </label>`
-      ).join('');
-    body.appendChild(pickerWrap);
-    const wrap = document.createElement('div');
-    wrap.id = 'fsTblWrap';
-    wrap.style.cssText = 'overflow-x:auto;width:100%;';
-    const clone = tbl.cloneNode(true);
-    clone.style.cssText = 'width:100%;font-size:.72rem;border-collapse:collapse;';
-    wrap.appendChild(clone);
-    body.appendChild(wrap);
-  });
-}
-
-function fsOpenMap(){
-  openFullscreen(document.getElementById('compMapTitle').textContent, body => {
-    Object.assign(body.style, {padding:'0', overflow:'hidden'});
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'width:100%;height:100%;min-height:400px;';
-    wrap.id = 'osmMapFs';
-    body.appendChild(wrap);
-    // Attend que le DOM soit rendu avant d'init Leaflet
-    setTimeout(()=>{
-      const fsMap = L.map('osmMapFs', {zoomControl:true, attributionControl:true});
-      const _ft = _MAP_TILES[_mapTileType] || _MAP_TILES.standard;
-      L.tileLayer(_ft.url, {maxZoom:19, attribution:_ft.attr}).addTo(fsMap);
-      const col = BRAND.primaire1 || '#a06bff';
-      if(LINE && LINE.stations){
-        const pts = LINE.stations
-          .map(s=>({lat:parseFloat(s.lat||s.latitude||s.LAT||''),lon:parseFloat(s.lon||s.lng||s.longitude||s.LON||''),nom:s.nom}))
-          .filter(p=>!isNaN(p.lat)&&!isNaN(p.lon));
-        if(pts.length){
-          const poly = L.polyline(pts.map(p=>[p.lat,p.lon]),{color:col,weight:5,opacity:.85}).addTo(fsMap);
-          pts.forEach((p,i)=>{
-            const isT=i===0||i===pts.length-1;
-            L.circleMarker([p.lat,p.lon],{radius:isT?10:6,fillColor:isT?col:'#fff',color:col,weight:2,fillOpacity:isT?1:.9})
-             .bindTooltip(p.nom,{permanent:false,direction:'top'}).addTo(fsMap);
-          });
-          fsMap.fitBounds(poly.getBounds(),{padding:[32,32]});
-        } else if(_mapGeoJSON){
-          const layer = L.geoJSON(_mapGeoJSON,{style:{color:col,weight:5}}).addTo(fsMap);
-          fsMap.fitBounds(layer.getBounds(),{padding:[32,32]});
-        } else {
-          fsMap.setView([46.5,2.3],6);
-        }
-      } else {
-        fsMap.setView([46.5,2.3],6);
-      }
-      fsMap.invalidateSize();
-    }, 150);
-  });
-}
-
-/* ── Settings panel ── */
-function toggleSettingsPanel(){
-  _settingsOpen = !_settingsOpen;
-  document.getElementById('settingsPanel').classList.toggle('open', _settingsOpen);
-  document.getElementById('settingsOverlay').classList.toggle('show', _settingsOpen);
-  document.getElementById('settingsTabArrow').textContent = _settingsOpen ? '&gt;' : '&lt;';
-  document.getElementById('settingsTabArrow').innerHTML  = _settingsOpen ? '&gt;' : '&lt;';
-  document.getElementById('hamburgerBtn').classList.toggle('active', _settingsOpen);
-}
-
-function applyKpiSticky(){
-  const banner = document.querySelector('.kpi-banner');
-  const view   = document.getElementById('view-parcours');
-  if(!banner) return;
-  if(_kpiSticky){
-    banner.style.cssText = 'position:sticky;top:0;z-index:200;background:transparent;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding-top:.4rem;padding-bottom:.4rem;margin-bottom:.5rem;';
-  } else {
-    banner.style.cssText = '';
-  }
-}
-
-function applySettings(){
-  // Unité de vitesse
-  const su = document.getElementById('settSpeedUnit');
-  if(su) _speedUnit = su.value;
-  // Décimales
-  const dt = document.getElementById('settDecimals');
-  if(dt) _decTime = parseInt(dt.value)||1;
-  const dd = document.getElementById('settDecimalsKm');
-  if(dd) _decDist = parseInt(dd.value)||2;
-  const ds = document.getElementById('settDecimalsSpd');
-  if(ds) _decSpd  = parseInt(ds.value)||1;
-  // Libellé unité vitesse dans le settings
-  const lbl = document.getElementById('settLblDecimalsSpd');
-  if(lbl) lbl.textContent = `Décimales vitesse (${_speedUnit})`;
-  // Seuils occupation
-  const s1 = parseFloat(document.getElementById('settOccupS1').value)||20;
-  const s2 = parseFloat(document.getElementById('settOccupS2').value)||30;
-  window.SETT_OCCUP_S1 = s1;
-  window.SETT_OCCUP_S2 = s2;
-  // KPIs sticky
-  const sk = document.getElementById('settKpiSticky');
-  if(sk) _kpiSticky = sk.checked;
-  applyKpiSticky();
-  // Re-render
-  if(LINE && typeof render === 'function') render();
-  if(LINE && typeof renderTerminus === 'function') renderTerminus();
-}
-
-/* Lit une valeur de setting (avec valeur par défaut) */
-function getSett(id, def){ const el=document.getElementById(id); return el ? (parseFloat(el.value)||def) : def; }
-
 /* ── Login popup ── */
-function openLogin(){document.getElementById('loginOverlay').classList.add('show');}
-function closeLogin(){document.getElementById('loginOverlay').classList.remove('show');document.getElementById('loginStatus').textContent='';}
-function submitLogin(){
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPwd').value;
-  const st = document.getElementById('loginStatus');
-  if(!u||!p){ st.textContent = 'Veuillez remplir les deux champs.'; st.style.color='var(--orange)'; return; }
-  // Placeholder — pas d'auth réelle pour l'instant
-  st.textContent = '✓ Connexion simulée (non implémentée)';
-  st.style.color = 'var(--green)';
-  setTimeout(closeLogin, 1500);
-}
 
 /* ── Drag & drop sur les 2 zones ── */
 (function(){
@@ -952,7 +196,7 @@ async function handleZip(file, slot){
   const isRef = slot === 'ref';
   _importStart(slot, file.name);
   try{
-    _importSetProgress(slot, 5, 'Extraction du ZIP…');
+    _importSetProgress(slot, 5, T('importExtracting'));
     const zip = await JSZip.loadAsync(file);
 
     // Détecter préfixe racine (dossier créé par macOS/Windows)
@@ -1038,7 +282,7 @@ async function handleZip(file, slot){
 
     if(Object.keys(xlsxEntries).length === 0) throw new Error(T('noXlsx'));
 
-    _importSetProgress(slot, 45, 'Lecture du master…');
+    _importSetProgress(slot, 45, T('importReadMaster'));
     // ── Lire master.xlsx (META + carousel) ──
     let masterMeta = {departH:6,departM:5,serviceHeures:18};
     let masterCarousel = [];
@@ -1068,7 +312,7 @@ async function handleZip(file, slot){
     const scenariosData = []; // données complètes par scénario
 
     for(const [idx, label] of scLabels.entries()){
-      _importSetProgress(slot, 55 + Math.round(idx/scLabels.length*25), `Scénario ${idx+1}/${scLabels.length} — ${label}`);
+      _importSetProgress(slot, 55 + Math.round(idx/scLabels.length*25), T('importScenario').replace('{i}',idx+1).replace('{n}',scLabels.length).replace('{label}',label));
       const buf = await xlsxEntries[label].async('arraybuffer');
       const wb  = XLSX.read(buf, {type:'array'});
       const sc  = parseSingleScenario(wb, label);
@@ -1131,13 +375,13 @@ async function handleZip(file, slot){
       radarActiveScenarios  = null;
       chargeActiveScenarios = null;
 
-      _importSetProgress(slot, 85, 'Chargement de l\'interface…');
+      _importSetProgress(slot, 85, T('importLoadingUI'));
       rebuildUI();
 
       // Attendre que les fragments soient dans le DOM (Live Server)
       await _waitForView(4000);
 
-      _importSetProgress(slot, 95, 'Rendu…');
+      _importSetProgress(slot, 95, T('importRendering'));
       render();
       if(typeof currentTab !== 'undefined'){
         if(currentTab==='terminus'   && typeof renderTerminus  ==='function') renderTerminus();
@@ -1156,8 +400,6 @@ async function handleZip(file, slot){
 
 
 // ── Parseurs atomiques ──
-
-
 
 
 /* Lit la feuille COLOR : colonnes A=clé, B=libellé, C=hex */
@@ -1459,16 +701,7 @@ function parseTempsMarche(wb, sc){
   return {tendu, tenduR, detenteA, detenteR};
 }
 
-// Rétrocompatibilité : 1 seul fichier xlsx (ancien format)
-function parseXlsxMaster(wb){
-  return {
-    meta:         parseMeta(wb),
-    stations:     parseStations(wb),
-    inter:        parseInter(wb),
-    retournement: parseRetournement(wb),
-    scenarios:    [], tendu:{}, tenduR:{}, detenteA:[], detenteR:[],
-  };
-}
+/* parseXlsxMaster supprimé — format ZIP multi-fichiers uniquement */
 
 
 /* Résout le retournement d'un terminus par son nom → {totalSec, params:[{label,sec}]} */
@@ -1627,7 +860,7 @@ function applyPlagesFromWb(wb){
   }
   if(newPlages.length>0){
     PLAGES=newPlages;
-    console.log('PLAGES chargées:', PLAGES.map(p=>`${p.type} ${p.debut}→${p.fin} freq=${p.freq}`));
+    // Debug : console.log('PLAGES chargées:', PLAGES);
     drawClock();
     updateClockLegend();
   }
@@ -1671,7 +904,6 @@ function mmssToMin(v){
 }
 
 
-
 /* ═══════════════════════════════════════════════
    IMPORT IMAGES MARCHE TYPE
 ═══════════════════════════════════════════════ */
@@ -1700,15 +932,17 @@ function updateMTImage(){
   }
   if(!src) src = MT_IMAGES[currentDir] || '';
 
-  if(src){
-    img.src=src;
-    img.style.display='block';
-    ph.style.display='none';
-  } else {
-    img.style.display='none';
-    ph.style.display='flex';
+  if(img && ph){
+    if(src){
+      img.src=src;
+      img.style.display='block';
+      ph.style.display='none';
+    } else {
+      img.style.display='none';
+      ph.style.display='flex';
+    }
   }
-  lbl.textContent=currentDir==='aller'?`↓ ${T('dirOutbound')}`:`↑ ${T('dirInbound')}`;
+  if(lbl) lbl.textContent=currentDir==='aller'?`↓ ${T('dirOutbound')}`:`↑ ${T('dirInbound')}`;
 }
 
 
@@ -1773,7 +1007,7 @@ function computeKPIs(scIdx){
     tRetourMin  = tronconKPIs.reduce((a,t)=>a+t.tR, 0);
     totalDistKm = tronconKPIs.reduce((a,t)=>a+t.dist, 0);
     flotteNec   = tronconKPIs.reduce((a,t)=>a+t.flotteNec, 0);
-    flotteTot   = Math.ceil(flotteNec * 1.15);
+    flotteTot   = Math.ceil(flotteNec * RESERVE_COEFF);
     vitA        = +(totalDistKm/(tAllerMin/60)).toFixed(1);
     vitR        = +(totalDistKm/(tRetourMin/60)).toFixed(1);
     tCycleMin   = tAllerMin + tRetourMin + tRetCycleMin;
@@ -1782,7 +1016,7 @@ function computeKPIs(scIdx){
     const tr = sp.troncons[0];
     const k = kpiTroncon(tr, termSc.retA, termSc.retR);
     tAllerMin=k.tA; tRetourMin=k.tR; totalDistKm=k.dist;
-    flotteNec=k.flotteNec; flotteTot=Math.ceil(flotteNec*1.15);
+    flotteNec=k.flotteNec; flotteTot=Math.ceil(flotteNec*RESERVE_COEFF);
     vitA=k.vitA; vitR=k.vitR; tCycleMin=k.tCyc;
   } else {
     // NOMINAL

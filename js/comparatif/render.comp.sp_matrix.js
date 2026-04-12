@@ -48,7 +48,7 @@ function renderSPMatrix(){
 
   // En-tête : stations + séparateur + dépôts
   let h = `<table class="sp-matrix"><thead><tr>`;
-  h += `<th class="row-hdr col-hdr" style="min-width:80px;width:80px">${isEN?'Incident station':'Station (incident)'}</th>`;
+  h += `<th class="row-hdr col-hdr" style="min-width:80px;width:80px">${T('compIncidentStation')}</th>`;
   for(let j=0; j<N; j++){
     const nm = stations[j].nom;
     h += `<th class="col-hdr" title="${nm}">${nm}</th>`;

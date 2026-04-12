@@ -1,21 +1,34 @@
-let LINE = null; // Données projet principal
-let LINE_REF = null; // Données version de référence (comparaison inter-projets)
 /* ── core.js — État global, init ── */
 /* ═══════════════════════════════════════════════
-   ÉTAT
+   DONNÉES
+═══════════════════════════════════════════════ */
+let LINE     = null; // Données projet principal
+let LINE_REF = null; // Données version de référence (comparaison inter-projets)
+
+/* ═══════════════════════════════════════════════
+   ÉTAT NAVIGATION
 ═══════════════════════════════════════════════ */
 let currentDir = 'aller';
 let currentSc  = 0;
+let currentTab = 'parcours'; // mis à jour par switchTab()
+
+/* ═══════════════════════════════════════════════
+   ÉTAT UI
+═══════════════════════════════════════════════ */
 let isDark = true;
 let isEN   = false;
 let _settingsOpen = false;
+let _kpiSticky    = false;    // KPIs figés
+
+/* ═══════════════════════════════════════════════
+   PRÉFÉRENCES D'AFFICHAGE
+═══════════════════════════════════════════════ */
 let _cycleShowPct = false;
 let _occupShowPct = false;
 let _speedUnit    = 'km/h';   // 'km/h' | 'm/s' | 'mi/h'
 let _decTime      = 1;        // décimales temps
 let _decDist      = 2;        // décimales distance
 let _decSpd       = 1;        // décimales vitesse
-let _kpiSticky    = false;    // KPIs figés
 
 function toggleCyclePct(){
   _cycleShowPct = !_cycleShowPct;
@@ -38,12 +51,24 @@ function toggleOccupPct(){
   if(btn) btn.classList.toggle('active', _occupShowPct);
   if(LINE && typeof renderOccupKPI === 'function') renderOccupKPI();
 }
-let radarActiveScenarios  = null;
-let bubbleActiveSc       = null;  // index unique du scénario affiché dans le graphique montées/descentes
-let bubbleDir            = 'aller'; // direction affichée dans le graphique montées/descentes
+/* ═══════════════════════════════════════════════
+   ÉTAT GRAPHIQUES COMPARATIF
+═══════════════════════════════════════════════ */
+let radarActiveScenarios = null;
+let bubbleActiveSc       = null;  // index du scénario affiché dans le serpent de charge
+let bubbleDir            = 'aller'; // direction affichée dans le serpent de charge
 let _chargeView          = 'flux'; // 'flux' | 'charge'
-let _dwVisible           = true;
+let _dwVisible           = true;   // affichage des temps d'arrêt dans le tableau
 
+/* ═══════════════════════════════════════════════
+   CONSTANTES SVG (schéma parcours)
+   CX       : centre X de la colonne station
+   DOT_R    : rayon des points d'arrêt
+   TERM_R   : rayon des terminus (plus grand)
+   ROW_H    : hauteur d'une ligne station (px)
+   ROW_R    : rayon de la ligne de tracé
+   CARREFOUR_RATIO : fraction de ROW_H réservée aux carrefours
+═══════════════════════════════════════════════ */
 const CX=50, DOT_R=8, TERM_R=11, ROW_H=58, ROW_R=40;
 const CARREFOUR_RATIO=0.20;
 
@@ -108,5 +133,3 @@ function initApp(){
   if(typeof drawClock === 'function') drawClock();
   if(typeof updateClockLegend === 'function') updateClockLegend();
 }
-
-let currentTab = 'parcours';  // onglet actif — mis à jour par switchTab()

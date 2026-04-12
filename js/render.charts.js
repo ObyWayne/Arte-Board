@@ -1,4 +1,8 @@
 /* ── render.charts.js — BOP, radar, charge, stack cycle ── */
+
+/* ─ Couleur neutre des barres retournement (non paramétrable via COLOR) ─ */
+const COLOR_REVERSAL = '#6b7280';
+
 /* ═══════════════════════════════════════════════
    CHARTS
 ═══════════════════════════════════════════════ */
@@ -37,14 +41,14 @@ function renderCharts(scIdx){
     const mPureR = Math.max(0, mR - carrR);
     const aA  = stations.reduce((a,s)=>a+s.arretA,0)/60;
     const aR  = stations.reduce((a,s)=>a+s.arretR,0)/60;
-    const segsA = [{l: isEN?'Run time':'Marche tendue',    v:mPureA, c:C_MA},
-                   {l: isEN?'Priority':'Priorité',  v:carrA,  c:C_CA},
-                   {l: isEN?'Recovery':'Détente',          v:dSA,    c:C_DA},
-                   {l: isEN?'Station dwell':'Arrêts station', v:aA,  c:C_AA}];
-    const segsR = [{l: isEN?'Run time':'Marche tendue',    v:mPureR, c:C_MR},
-                   {l: isEN?'Priority':'Priorité',  v:carrR,  c:C_CR},
-                   {l: isEN?'Recovery':'Détente',          v:dSR,    c:C_DR},
-                   {l: isEN?'Station dwell':'Arrêts station', v:aR,  c:C_AR}];
+    const segsA = [{l: T('bopRunTime'),  v:mPureA, c:C_MA},
+                   {l: T('bopPriority'), v:carrA,  c:C_CA},
+                   {l: T('bopRecovery'), v:dSA,    c:C_DA},
+                   {l: T('bopDwell'),    v:aA,     c:C_AA}];
+    const segsR = [{l: T('bopRunTime'),  v:mPureR, c:C_MR},
+                   {l: T('bopPriority'), v:carrR,  c:C_CR},
+                   {l: T('bopRecovery'), v:dSR,    c:C_DR},
+                   {l: T('bopDwell'),    v:aR,     c:C_AR}];
     // Filtrer les segments à 0 pour ne pas polluer le pie
     const filtA = segsA.filter(s=>s.v>0);
     const filtR = segsR.filter(s=>s.v>0);
@@ -312,15 +316,15 @@ function renderCharts(scIdx){
     const tA  = mA+dSA+aA;
     const tR  = mR+dSR+aR;
     const CSEGS=[
-      {l:isEN?'Outbound time':'Temps aller',  v:tA,  c:BRAND.aller},
-      {l:isEN?'Reversal':'Retournement',       v:cRA, c:'#6b7280'},
-      {l:isEN?'Inbound time':'Temps retour',  v:tR,  c:BRAND.retour},
-      {l:isEN?'Reversal':'Retournement',       v:cRR, c:'#6b7280'},
+      {l:T('cycleOutbound'), v:tA,  c:BRAND.aller},
+      {l:T('cycleReversal'), v:cRA, c:COLOR_REVERSAL},
+      {l:T('cycleInbound'),  v:tR,  c:BRAND.retour},
+      {l:T('cycleReversal'), v:cRR, c:COLOR_REVERSAL},
     ];
     const CSEG_ICONS = ['⬆', '🔁', '⬇', '🔂'];
     if(containerEl) containerEl.innerHTML=CSEGS.map((s,i)=>{
       const p=(s.v/cyc*100).toFixed(1);
-      const textColor = s.c==='#6b7280' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.75)';
+      const textColor = s.c===COLOR_REVERSAL ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.75)';
       return `<div class="stack-seg" style="width:${p}%;background:${s.c};cursor:pointer;transition:filter .15s;"
         data-label="${s.l}" data-val="${fmtMin(s.v)}" data-pct="${p}" data-col="${s.c}" data-icon="${CSEG_ICONS[i]}"
         onmouseenter="stackSegEnter(this,event)" onmouseleave="stackSegLeave(this)"
@@ -328,20 +332,18 @@ function renderCharts(scIdx){
     }).join('');
     if(labelEl) labelEl.innerHTML=CSEGS.map((s,i)=>{
       const p=(s.v/cyc*100).toFixed(1);
-      const lbl = (i===1) ? `${s.l} (${isEN?'Out.':'All.'})` :
-                  (i===3) ? `${s.l} (${isEN?'In.':'Ret.'})` : s.l;
+      const lbl = (i===1) ? `${s.l} (${T('cycleAllAbbr')})` :
+                  (i===3) ? `${s.l} (${T('cycleRetAbbr')})` : s.l;
       const val = _cycleShowPct ? `${p}%` : fmtMin(s.v);
       return `<div class="stack-label"><div class="stack-label-dot" style="background:${s.c}"></div>${lbl}<span style="margin-left:.2rem;font-family:'Courier New',monospace;color:var(--text2);font-size:.5rem">${val}</span></div>`;
     }).join('');
-    if(totalEl) totalEl.textContent=`Σ ${isEN?'Cycle':'Cycle'} = ${_cycleShowPct ? '100%' : fmtMin(cyc)}`;
+    if(totalEl) totalEl.textContent=`Σ Cycle = ${_cycleShowPct ? '100%' : fmtMin(cyc)}`;
   }
 
   /* Helper : génère HTML chrono (canvas) simplifié */
   function renderBopPies(outId, inId, pieSize){
     const MINI = 58;
-    const S = isEN
-      ? ['Run','Priority','Recovery','Dwell']
-      : ['Marche','Priorité','Détente','Arrêts'];
+    const S = [T('bopRun'), T('bopPriorityShort'), T('bopRecoveryShort'), T('bopDwellShort')];
     function miniCell(id, lbl, color){
       return `<div style="display:flex;flex-direction:column;align-items:center;gap:.1rem;">`
         +`<div style="font-size:.44rem;font-weight:800;color:${color};text-align:center;`
@@ -511,7 +513,7 @@ function renderCharts(scIdx){
     ctx.strokeStyle = cT3; ctx.lineWidth = 0.8; ctx.stroke();
     ctx.fillStyle = cT3; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.font = `500 ${sz * 0.82}px Barlow Condensed,sans-serif`;
-    ctx.fillText(isEN ? 'Time' : 'min', xEnd + 18, axisY);
+    ctx.fillText(T('cycleTimeAxis'), xEnd + 18, axisY);
     // Ticks
     const step = cyc<=20?5:cyc<=60?10:cyc<=120?20:30;
     ctx.textAlign = 'center'; ctx.fillStyle = cT3;
@@ -541,17 +543,17 @@ function renderCharts(scIdx){
       ctx.fillStyle = cT2; ctx.font = `600 ${szV}px Barlow Condensed,sans-serif`;
       ctx.fillText(val, x, top + szL + 1);
     }
-    lblAbove(x0+4, isEN?'↓ Outbound':'↓ Aller',  fmtMmSs(0),               C_A,  'left');
-    lblAbove(xA,   trunc(termR||(isEN?'End term.':'Term. aller'),14),  fmtMmSs(tA),              C_TA);
-    lblBelow(xRA,  isEN?'↑ Inbound':'↑ Retour',  fmtMmSs(tA + cRA),        C_R);
-    lblBelow(xR,   trunc(termA||(isEN?'Start term.':'Term. retour'),14), fmtMmSs(tA + cRA + tR),  C_TR);
+    lblAbove(x0+4, T('cycleDirOut'),              fmtMmSs(0),               C_A,  'left');
+    lblAbove(xA,   trunc(termR||T('cycleTermA'),14),                   fmtMmSs(tA),              C_TA);
+    lblBelow(xRA,  T('cycleDirIn'),               fmtMmSs(tA + cRA),        C_R);
+    lblBelow(xR,   trunc(termA||T('cycleTermR'),14),                      fmtMmSs(tA + cRA + tR),  C_TR);
 
     // ── Hover ──
     const SEGS = [
-      {l:isEN?'Outbound':'Aller',                                        v:tA,  c:C_A,  icon:'↓', x0:x0,  x1:xEnd, y0:yTA1, y1:yA1  },
-      {l:trunc(termR||(isEN?'End term.':'Term. aller'),28),               v:cRA, c:C_TA, icon:'🔁', x0:xA,  x1:xEnd, y0:yTA0, y1:yTA1 },
-      {l:isEN?'Inbound':'Retour',                                        v:tR,  c:C_R,  icon:'↑', x0:xRA, x1:xEnd, y0:yA1,  y1:yR1  },
-      {l:trunc(termA||(isEN?'Start term.':'Term. retour'),28),            v:cRR, c:C_TR, icon:'🔂', x0:xR,  x1:xEnd, y0:yR1,  y1:yTR1 },
+      {l:T('cycleOutShort'),                       v:tA,  c:C_A,  icon:'↓', x0:x0,  x1:xEnd, y0:yTA1, y1:yA1  },
+      {l:trunc(termR||T('cycleTermA'),28),          v:cRA, c:C_TA, icon:'🔁', x0:xA,  x1:xEnd, y0:yTA0, y1:yTA1 },
+      {l:T('cycleInShort'),                        v:tR,  c:C_R,  icon:'↑', x0:xRA, x1:xEnd, y0:yA1,  y1:yR1  },
+      {l:trunc(termA||T('cycleTermR'),28),          v:cRR, c:C_TR, icon:'🔂', x0:xR,  x1:xEnd, y0:yR1,  y1:yTR1 },
     ];
     const TIP_BOX = { x0:xEnd, x1:tipX+6, y0:yTA0-2, y1:yTR1+2 };
     canvas._cycleDiag = { SEGS, cyc, TIP_BOX, cBg4, cTxt };
@@ -732,7 +734,7 @@ function _cycleDiagMouseMove(e){
     canvas.style.cursor='pointer';
     tt.style.background = c.cBg4||'#2d3449';
     document.getElementById('ptIcon').textContent='🔄';
-    document.getElementById('ptLabel').textContent=isEN?'Total cycle':'Cycle total';
+    document.getElementById('ptLabel').textContent=T('cycleTotal');
     document.getElementById('ptVal').textContent=fmtHhMmSs(c.cyc);
     document.getElementById('ptPct').textContent='100%';
     tt.style.display='block';
@@ -782,7 +784,7 @@ function renderDepotKPI(k){
     return `<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:var(--fontb);">
       <span style="font-size:.5rem;color:var(--text3)">${minToHM(m.debut)}</span>
       <span style="font-size:.58rem;font-weight:800;color:${color}">${sign} veh</span>
-      <span style="font-size:.5rem;color:var(--text3)">→ ${m.veh} ${isEN?'in svc':'en ligne'}</span>
+      <span style="font-size:.5rem;color:var(--text3)">→ ${m.veh} ${T('depotInSvc')}</span>
     </div>`;
   }).join('');
 }

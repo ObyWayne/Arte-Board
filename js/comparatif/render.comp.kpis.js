@@ -64,7 +64,6 @@ function renderComparatif(){
   if(!LINE){ console.warn('[renderComparatif] LINE is null'); return; }
   let all;
   try { all = computeKPIsAll(); } catch(e){ console.error('[renderComparatif] computeKPIsAll threw:', e); return; }
-  console.log('[renderComparatif] all.length =', all.length, '| scenarios =', LINE.scenarios.length);
   if(all.length === 0){
     document.getElementById('radarScSelector').innerHTML  = '';
     document.getElementById('chargeScSelector').innerHTML = '';

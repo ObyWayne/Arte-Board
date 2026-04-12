@@ -97,7 +97,7 @@ function renderCompTable(all) {
   const STK_TD_MOE = 'position:sticky;left:0;z-index:1;background:var(--bg3);font-weight:700;color:var(--text);';
 
   let html = `<thead><tr>
-    <th style="${STK_TH}">${isEN ? 'Scenario' : 'Scénario'}</th>
+    <th style="${STK_TH}">${T('compScenario')}</th>
     ${COLS.map(c => `<th>${c.label}</th>`).join('')}
   </tr></thead><tbody>`;
 
@@ -187,7 +187,7 @@ function exportCompTableCSV() {
     ...c, label: isEN ? c.labelEN : c.label
   }));
 
-  const headers = [isEN ? 'Scenario' : 'Scénario', ...COLS.map(c => c.label)];
+  const headers = [T('compScenario'), ...COLS.map(c => c.label)];
   const rows = [headers];
 
   all.forEach(k => {

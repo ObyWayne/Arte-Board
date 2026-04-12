@@ -269,7 +269,7 @@ function renderRadar(all, filtered) {
     allPts[fi].forEach(([x,y]) => {
       ctx.beginPath(); ctx.arc(x,y,4.5,0,Math.PI*2);
       ctx.fillStyle   = col; ctx.fill();
-      ctx.strokeStyle = isLight ? '#ffffff' : '#181c28';
+      ctx.strokeStyle = isLight ? '#ffffff' : getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#181c28';
       ctx.lineWidth   = 1.8; ctx.stroke();
     });
   }

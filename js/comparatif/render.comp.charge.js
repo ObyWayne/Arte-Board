@@ -256,15 +256,15 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx) {
   ctx.font = '700 8.5px "Barlow Condensed",sans-serif'; ctx.textAlign = 'left';
   if (_chargeView === 'flux') {
     ctx.fillStyle = COL_MONTEES + 'dd'; ctx.fillRect(PAD.l, legY-7, 10, 7);
-    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(isEN?'Boardings ↑':'Montées ↑', PAD.l+13, legY);
+    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(T('chargeBoardings'), PAD.l+13, legY);
     ctx.fillStyle = COL_DESCENTES + 'dd'; ctx.fillRect(PAD.l+82, legY-7, 10, 7);
-    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(isEN?'Alightings ↓':'Descentes ↓', PAD.l+95, legY);
+    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(T('chargeAlightings'), PAD.l+95, legY);
     ctx.fillStyle = COL_CHARGE + 'cc'; ctx.fillRect(PAD.l+185, legY-7, 10, 7);
-    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(isEN?'Load':'Charge', PAD.l+198, legY);
+    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(T('chargeLoad'), PAD.l+198, legY);
   } else {
     ctx.fillStyle = COL_CHARGE + 'cc'; ctx.fillRect(PAD.l, legY-7, 10, 7);
     ctx.strokeStyle = COL_CHARGE; ctx.lineWidth = 1; ctx.strokeRect(PAD.l, legY-7, 10, 7);
-    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(isEN?'Load (cumul.)':'Charge cumulée', PAD.l+13, legY);
+    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(T('chargeLoadCumul'), PAD.l+13, legY);
   }
   if (_dwVisible) {
     let legOff = _chargeView === 'flux' ? PAD.l+238 : PAD.l+138;
@@ -278,7 +278,7 @@ function renderBubbleChartOnCanvas(canvas, forcedW, forcedH, all, scIdx) {
     });
     ctx.strokeStyle = 'rgba(180,140,255,.85)'; ctx.lineWidth = 2.5; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(legOff, legY-4); ctx.lineTo(legOff+24, legY-4); ctx.stroke();
-    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(isEN?'DW est.':'DW théo.', legOff+27, legY);
+    ctx.fillStyle = 'rgba(180,190,220,.85)'; ctx.fillText(T('chargeDwEst'), legOff+27, legY);
   }
 
   /* Tooltip */
@@ -322,7 +322,7 @@ function _renderBubbleYAxis(PAD, H, PH, yMax, py, dpr, view) {
   axCtx.translate(11, PAD.t + PH/2); axCtx.rotate(-Math.PI/2);
   axCtx.fillStyle = isLight ? 'rgba(60,70,90,.4)' : 'rgba(180,190,220,.35)';
   axCtx.font = '600 9px "Barlow Condensed",sans-serif'; axCtx.textAlign = 'center';
-  axCtx.fillText(view === 'charge' ? (isEN?'Cumul. load':'Charge cumulée') : (isEN?'Boardings / Alightings':'Montées / Descentes'), 0, 0);
+  axCtx.fillText(view === 'charge' ? (T('chargeLoadCumul')) : (T('chargeBoardAlight')), 0, 0);
   axCtx.restore();
 }
 
@@ -346,26 +346,26 @@ function _showBubbleTooltip(e, nom, monteesV, descentesV, charge, dw) {
   const t = _getBubbleTooltip();
   const dwR   = Math.round(dw * 10) / 10;
   const dwCol = dwColor(dw);
-  const dwLbl = dw < DW_REFS[0] ? 'OK ✓' : dw < DW_REFS[1] ? (isEN?'Caution':'Attention ⚠') : (isEN?'Critical !':'Critique !');
+  const dwLbl = dw < DW_REFS[0] ? 'OK ✓' : dw < DW_REFS[1] ? (T('chargeCaution')) : (T('chargeCritical'));
   const viewRows = _chargeView === 'flux'
     ? `<div style="display:flex;justify-content:space-between;gap:14px;margin:2px 0;">
-        <span style="color:var(--text2);">${isEN?'Boardings':'Montées'}</span>
+        <span style="color:var(--text2);">${T('chargeBoardShort')}</span>
         <span style="color:var(--text);font-weight:700;">${monteesV}</span></div>
        <div style="display:flex;justify-content:space-between;gap:14px;margin:2px 0;">
-        <span style="color:var(--text2);">${isEN?'Alightings':'Descentes'}</span>
+        <span style="color:var(--text2);">${T('chargeAlightShort')}</span>
         <span style="color:var(--text);font-weight:700;">${descentesV}</span></div>` : '';
   t.innerHTML = `
     <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:5px;">${nom}</div>
     ${viewRows}
     <div style="display:flex;justify-content:space-between;gap:14px;margin:2px 0;">
-      <span style="color:var(--text2);">${isEN?'Load':'Charge'}</span>
+      <span style="color:var(--text2);">${T('chargeLoad')}</span>
       <span style="font-weight:700;color:var(--text2);">${charge} pass.</span></div>
     <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div style="display:flex;justify-content:space-between;gap:14px;margin:2px 0;">
-      <span style="color:var(--text2);">${isEN?'DW est.':'DW théo.'}</span>
+      <span style="color:var(--text2);">${T('chargeDwEst')}</span>
       <span style="color:${dwCol};font-weight:800;">${dwR} s</span></div>
     <div style="display:flex;justify-content:space-between;gap:14px;margin:2px 0;">
-      <span style="color:var(--text2);">${isEN?'Status':'Statut'}</span>
+      <span style="color:var(--text2);">${T('chargeStatus')}</span>
       <span style="color:${dwCol};font-weight:700;">${dwLbl}</span></div>`;
   t.style.display = 'block';
   t.style.left = (e.clientX + 14) + 'px';

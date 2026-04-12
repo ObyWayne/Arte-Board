@@ -61,14 +61,14 @@ function _buildEnergyUnifiedCatalog(data1, data2) {
   const catalog = [];
 
   /* ── Aller ── */
-  catalog.push({ id:'mA',  label:isEN?'Running':'Marche',       group:'aller',  grpLabel:isEN?'Outbound':'Aller', color:colA,                    compressible:false });
-  catalog.push({ id:'dSA', label:isEN?'Recovery':'Détente',     group:'aller',  grpLabel:null,                    color:_lightenHex(colA,0.30),  compressible:true  });
-  catalog.push({ id:'aA',  label:isEN?'Dwell':'Arrêts station', group:'aller',  grpLabel:null,                    color:_lightenHex(colA,0.50),  compressible:false });
+  catalog.push({ id:'mA',  label:T('energyRunning'),       group:'aller',  grpLabel:T('cycleOutShort'), color:colA,                    compressible:false });
+  catalog.push({ id:'dSA', label:T('bopRecovery'),     group:'aller',  grpLabel:null,                    color:_lightenHex(colA,0.30),  compressible:true  });
+  catalog.push({ id:'aA',  label:T('bopDwell'), group:'aller',  grpLabel:null,                    color:_lightenHex(colA,0.50),  compressible:false });
 
   /* ── Retour ── */
-  catalog.push({ id:'mR',  label:isEN?'Running':'Marche',       group:'retour', grpLabel:isEN?'Inbound':'Retour', color:colR,                    compressible:false });
-  catalog.push({ id:'dSR', label:isEN?'Recovery':'Détente',     group:'retour', grpLabel:null,                    color:_lightenHex(colR,0.30),  compressible:true  });
-  catalog.push({ id:'aR',  label:isEN?'Dwell':'Arrêts station', group:'retour', grpLabel:null,                    color:_lightenHex(colR,0.50),  compressible:false });
+  catalog.push({ id:'mR',  label:T('energyRunning'),       group:'retour', grpLabel:T('cycleInShort'), color:colR,                    compressible:false });
+  catalog.push({ id:'dSR', label:T('bopRecovery'),     group:'retour', grpLabel:null,                    color:_lightenHex(colR,0.30),  compressible:true  });
+  catalog.push({ id:'aR',  label:T('bopDwell'), group:'retour', grpLabel:null,                    color:_lightenHex(colR,0.50),  compressible:false });
 
   /* ── Terminus ── */
   if (_efGroupTerminus) {
@@ -355,14 +355,14 @@ function _showEnergyTooltip(e, n, scLabel1, scLabel2) {
       border-top:1px solid var(--border);padding-top:7px;">
       <div>
         <div style="height:3px;width:${Math.min(pct1,100)}px;max-width:70px;background:${n.color};border-radius:2px;margin-bottom:2px;"></div>
-        <span style="font-size:9px;color:var(--text3);">${pct1}% ${isEN?'of cycle':'du cycle'}</span>
+        <span style="font-size:9px;color:var(--text3);">${pct1}% ${T('energyOfCycle')}</span>
       </div>
       <div style="text-align:right;">
         <div style="height:3px;width:${Math.min(pct2,100)}px;max-width:70px;background:${n.color};border-radius:2px;margin-bottom:2px;margin-left:auto;"></div>
-        <span style="font-size:9px;color:var(--text3);">${pct2}% ${isEN?'of cycle':'du cycle'}</span>
+        <span style="font-size:9px;color:var(--text3);">${pct2}% ${T('energyOfCycle')}</span>
       </div>
     </div>
-    ${n.compressible?`<div style="font-size:9px;color:var(--text3);margin-top:5px;font-style:italic;text-align:center;">⏹ ${isEN?'Adjustable':'Temps ajustable'}</div>`:''}`;
+    ${n.compressible?`<div style="font-size:9px;color:var(--text3);margin-top:5px;font-style:italic;text-align:center;">⏹ ${T('energyAdjustable')}</div>`:''}`;
 
   t.style.display = 'block';
   t.style.left    = (e.clientX+16)+'px';
@@ -420,7 +420,7 @@ function _renderEnergyCanvas(canvas, all) {
     ctx.scale(dpr, dpr); ctx.clearRect(0,0,400,80);
     ctx.fillStyle = 'rgba(160,170,210,.4)'; ctx.font='600 11px "Barlow Condensed",sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(isEN?'Need at least 2 scenarios':'Il faut au moins 2 scénarios nominaux', 200, 40);
+    ctx.fillText(T('energyNeedScenarios'), 200, 40);
     return;
   }
 
@@ -498,7 +498,7 @@ function renderEnergyFlow(all) {
     <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;
       padding:.3rem .4rem;border-bottom:1px solid var(--border);margin-bottom:.45rem;">
       <span style="font-size:.6rem;font-weight:700;color:var(--text3);white-space:nowrap;">
-        ${isEN?'Compare':'Comparer'} :
+        ${T('energyCompare')} :
       </span>
       <div class="col-picker-wrap">
         <button class="col-picker-btn" onclick="_toggleTermPicker(event,'_efPick1')">
