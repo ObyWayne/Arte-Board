@@ -124,35 +124,33 @@ function _buildSVG(sc, scIdx, k) {
   const scLabel    = (sc.label || `Scénario ${scIdx + 1}`).toUpperCase();
   const dateStr    = new Date().toLocaleDateString('fr-FR');
   const clientName = meta.client     || 'CLIENT';
-  const entreprise = meta.entreprise || 'SYSTRA';
+  const entreprise = meta.entreprise || 'ARTELIA';
 
   /* ── Terminus ──────────────────────────────────── */
-  const stA = LINE.stations[0]?.nom                    || 'Terminus A';
+  const stA = LINE.stations[0]?.nom                     || 'Terminus A';
   const stR = LINE.stations[LINE.stations.length-1]?.nom || 'Terminus B';
 
   /* ── KPIs ──────────────────────────────────────── */
-  const tMin    = Math.min(k.tAllerMin, k.tRetourMin);
-  const temps   = _fmtMin(tMin);
-  const freq    = `${k.freqHP} min`;
-  const flotte  = `${k.flotteTot}`;
-  const vitMoy  = +((k.vitA + k.vitR) / 2).toFixed(1);
-  const vit     = `${vitMoy} km/h`;
+  const tMin   = Math.min(k.tAllerMin, k.tRetourMin);
+  const temps  = _fmtMin(tMin);
+  const freq   = `${k.freqHP} min`;
+  const flotte = `${k.flotteTot}`;
+  const vitMoy = +((k.vitA + k.vitR) / 2).toFixed(1);
+  const vit    = `${vitMoy} km/h`;
 
   /* ── Matériel roulant ──────────────────────────── */
-  const mrRaw  = String(meta.mrType || 'metro').toLowerCase().replace(/[\s-]/g, '_');
-  const mrKey  = _MR_SVG[mrRaw] ? mrRaw : 'metro';
-  const mrSvg  = `img/svg/${_MR_SVG[mrKey]}`;
-  const mrLbl  = _MR_LBL[mrKey];
+  const mrRaw = String(meta.mrType || 'metro').toLowerCase().replace(/[\s-]/g, '_');
+  const mrKey = _MR_SVG[mrRaw] ? mrRaw : 'metro';
+  const mrSvg = `img/svg/${_MR_SVG[mrKey]}`;
+  const mrLbl = _MR_LBL[mrKey];
 
   /* ── Scorecard (META xlsx) ─────────────────────── */
-  /* Défaut SCORECARD_CRITERIA si clé META absente */
   let SCORECARD_CRITERIA = [
-  {key:'capacite',    fr:'Capacité',    en:'Capacity',    score:5},
-  {key:'regularite',  fr:'Régularité',  en:'Regularity',  score:4},
-  {key:'faisabilite', fr:'Faisabilité', en:'Feasibility', score:5},
-  {key:'efficacite',  fr:'Efficacité',  en:'Efficiency',  score:4},
-];
-
+    { key: 'capacite',    fr: 'Capacité',    en: 'Capacity',    score: 5 },
+    { key: 'regularite',  fr: 'Régularité',  en: 'Regularity',  score: 4 },
+    { key: 'faisabilite', fr: 'Faisabilité', en: 'Feasibility', score: 5 },
+    { key: 'efficacite',  fr: 'Efficacité',  en: 'Efficiency',  score: 4 },
+  ];
   const _scCrit = (key) => (SCORECARD_CRITERIA || []).find(c => c.key === key)?.score ?? 3.5;
 
   const sGlob = meta.scorecardGlobal     ?? _scCrit('all');
@@ -179,10 +177,6 @@ function _buildSVG(sc, scIdx, k) {
   <pattern id="${U}dp" width="26" height="26" patternUnits="userSpaceOnUse">
     <circle cx="13" cy="13" r="0.7" fill="white" fill-opacity="0.05"/>
   </pattern>
-  <radialGradient id="${U}pg" cx="50%" cy="55%" r="50%">
-    <stop offset="0%"   stop-color="${AC}" stop-opacity="0.24"/>
-    <stop offset="100%" stop-color="${AC}" stop-opacity="0"/>
-  </radialGradient>
   <clipPath id="${U}cc"><rect x="148" y="52" width="812" height="452"/></clipPath>
 </defs>
 
@@ -231,72 +225,90 @@ ${logo}
 <!-- ═════════════  ZONE CONTENU  ═════════════════════ -->
 <g clip-path="url(#${U}cc)">
 
-<!-- ── Temps de parcours ──────────────────────────── -->
-<text x="399" y="148" fill="white"
-  font-size="36" font-weight="700" letter-spacing="-0.5" font-family="system-ui,Arial">${temps}</text>
-<image x="647" y="113" width="58" height="33"
-  href="img/svg/travel_time_w.svg"
-  preserveAspectRatio="xMidYMid meet" opacity="0.82"/>
-<text x="399" y="166" fill="rgba(255,255,255,0.5)"
-  font-size="12" font-family="system-ui,Arial">entre ${_xe(stA)} et ${_xe(stR)}</text>
+${_skyline(U)}
 
-<!-- Connecteur temps → orbite -->
-<line x1="554" y1="170" x2="554" y2="182"
-  stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="4 3"/>
-<circle cx="554" cy="182" r="3" fill="rgba(255,255,255,0.30)"/>
+<!-- ── SÉPARATEUR scorecard / contenu principal ──── -->
+<line x1="308" y1="62" x2="308" y2="456"
+  stroke="rgba(255,255,255,0.07)" stroke-width="0.5"/>
 
-<!-- ── Orbite elliptique ───────────────────────────── -->
-<ellipse cx="554" cy="272" rx="230" ry="90"
-  fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="1.2" stroke-dasharray="6 5"/>
-<circle cx="324" cy="272" r="3" fill="rgba(255,255,255,0.25)"/>
-<circle cx="784" cy="272" r="3" fill="rgba(255,255,255,0.25)"/>
-<circle cx="554" cy="362" r="3" fill="rgba(255,255,255,0.25)"/>
+<!-- ── SCORECARD VERTICAL (zone gauche 148→308) ───── -->
+${_scorecardVertical(sR, sG, sF, AM, U)}
 
-<!-- Halo planète -->
-<ellipse cx="554" cy="321" rx="220" ry="30" fill="url(#${U}pg)"/>
+<!-- ── TEMPS DE PARCOURS ──────────────────────────── -->
+<text x="630" y="92" text-anchor="middle" fill="rgba(255,255,255,0.32)"
+  font-size="8.5" letter-spacing="2.5" font-family="system-ui,Arial">TEMPS DE PARCOURS</text>
+<text x="630" y="132" text-anchor="middle" fill="white"
+  font-size="50" font-weight="700" letter-spacing="-1.5" font-family="system-ui,Arial">${temps}</text>
+<text x="630" y="152" text-anchor="middle" fill="rgba(255,255,255,0.38)"
+  font-size="10.5" font-family="system-ui,Arial">${_xe(stA)}  ·  ${_xe(stR)}</text>
 
-<!-- ── Matériel roulant (planète centrale) ────────── -->
-<image x="330" y="213" width="448" height="118"
+<!-- ── LIGNE DE TRAJET ────────────────────────────── -->
+<!-- trait principal -->
+<line x1="355" y1="270" x2="905" y2="270"
+  stroke="rgba(255,255,255,0.18)" stroke-width="2.5"/>
+
+<!-- terminus gauche -->
+<circle cx="355" cy="270" r="13" fill="none" stroke="${AC}" stroke-width="2"/>
+<circle cx="355" cy="270" r="5"  fill="${AC}"/>
+<text x="355" y="298" text-anchor="middle" fill="rgba(255,255,255,0.45)"
+  font-size="9" font-family="system-ui,Arial">${_xe(stA)}</text>
+
+<!-- terminus droit -->
+<circle cx="905" cy="270" r="13" fill="none" stroke="${AC}" stroke-width="2"/>
+<circle cx="905" cy="270" r="5"  fill="${AC}"/>
+<text x="905" y="298" text-anchor="middle" fill="rgba(255,255,255,0.45)"
+  font-size="9" font-family="system-ui,Arial">${_xe(stR)}</text>
+
+<!-- ── KPI 1 : FLOTTE — au-dessus, ancre x=490 ──────
+     Bloc centré sur x=490, base du bloc à y=192 (haut du pointillé)
+     Structure : label (y=168) / ligne chiffre+icône (y=200) / sous-label (y=216)
+-->
+<circle cx="490" cy="270" r="5" fill="${AC}"/>
+<line x1="490" y1="265" x2="490" y2="192"
+  stroke="rgba(255,255,255,0.18)" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="422" y="168" text-anchor="start" fill="rgba(255,255,255,0.35)"
+  font-size="8" letter-spacing="2" font-family="system-ui,Arial">FLOTTE</text>
+<text x="422" y="200" text-anchor="start" fill="white"
+  font-size="38" font-weight="700" letter-spacing="-1" font-family="system-ui,Arial">${flotte}</text>
+<image x="470" y="170" width="40" height="40"
   href="${mrSvg}"
-  preserveAspectRatio="xMidYMid meet" opacity="0.95"/>
+  preserveAspectRatio="xMidYMid meet" opacity="0.72"/>
+<text x="422" y="216" text-anchor="start" fill="rgba(255,255,255,0.45)"
+  font-size="10" font-family="system-ui,Arial">${mrLbl}</text>
 
-<!-- Connecteurs KPI -->
-<line x1="295" y1="272" x2="324" y2="272"
-  stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="784" y1="272" x2="796" y2="272"
-  stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="554" y1="362" x2="554" y2="370"
-  stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="4 3"/>
-
-<!-- ── KPI GAUCHE : Fréquence ─────────────────────── -->
-<image x="160" y="245" width="54" height="54"
-  href="img/svg/Frequence_w.svg"
-  preserveAspectRatio="xMidYMid meet" opacity="0.85"/>
-<text x="222" y="281" fill="white"
-  font-size="30" font-weight="700" font-family="system-ui,Arial">${freq}</text>
-<text x="222" y="298" fill="rgba(255,255,255,0.5)"
-  font-size="11" font-family="system-ui,Arial">de fréquence</text>
-
-<!-- ── KPI DROITE : Flotte ───────────────────────── -->
-<text x="798" y="262" fill="white"
-  font-size="30" font-weight="700" font-family="system-ui,Arial">${flotte}</text>
-<text x="798" y="282" fill="rgba(255,255,255,0.5)"
-  font-size="11" font-family="system-ui,Arial">${mrLbl}</text>
-<image x="890" y="245" width="54" height="54"
-  href="img/svg/Designer_w.svg"
-  preserveAspectRatio="xMidYMid meet" opacity="0.85"/>
-
-<!-- ── KPI BAS : Vitesse commerciale ────────────── -->
-<image x="404" y="370" width="54" height="54"
+<!-- ── KPI 2 : VITESSE — en dessous, ancre x=628 ────
+     Bloc centré sur x=628, sommet du bloc à y=352 (bas du pointillé)
+     Structure : label (y=366) / ligne chiffre+icône (y=398) / sous-label (y=414)
+-->
+<circle cx="628" cy="270" r="5" fill="${AC}"/>
+<line x1="628" y1="275" x2="628" y2="352"
+  stroke="rgba(255,255,255,0.18)" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="560" y="370" text-anchor="start" fill="rgba(255,255,255,0.35)"
+  font-size="8" letter-spacing="2" font-family="system-ui,Arial">VITESSE COM.</text>
+<text x="560" y="402" text-anchor="start" fill="white"
+  font-size="38" font-weight="700" letter-spacing="-1" font-family="system-ui,Arial">${vit}</text>
+<image x="700" y="372" width="40" height="40"
   href="img/svg/speedometer_w.svg"
-  preserveAspectRatio="xMidYMid meet" opacity="0.85"/>
-<text x="466" y="407" fill="white"
-  font-size="28" font-weight="700" font-family="system-ui,Arial">${vit}</text>
-<text x="466" y="423" fill="rgba(255,255,255,0.5)"
-  font-size="11" font-family="system-ui,Arial">de vitesse commerciale</text>
+  preserveAspectRatio="xMidYMid meet" opacity="0.72"/>
+<text x="560" y="418" text-anchor="start" fill="rgba(255,255,255,0.45)"
+  font-size="10" font-family="system-ui,Arial">vitesse commerciale moyenne</text>
 
-<!-- ══════  BANDEAU SCORECARD  ══════════════════════ -->
-${_starBanner(sR, sG, sF, AM, U)}
+<!-- ── KPI 3 : FRÉQUENCE — au-dessus, ancre x=768 ───
+     Bloc centré sur x=768, base du bloc à y=192 (haut du pointillé)
+     Structure : label (y=168) / ligne chiffre+icône (y=200) / sous-label (y=216)
+-->
+<circle cx="768" cy="270" r="5" fill="${AC}"/>
+<line x1="768" y1="265" x2="768" y2="192"
+  stroke="rgba(255,255,255,0.18)" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="700" y="168" text-anchor="start" fill="rgba(255,255,255,0.35)"
+  font-size="8" letter-spacing="2" font-family="system-ui,Arial">FRÉQUENCE</text>
+<text x="700" y="200" text-anchor="start" fill="white"
+  font-size="38" font-weight="700" letter-spacing="-1" font-family="system-ui,Arial">${freq}</text>
+<image x="810" y="170" width="40" height="40"
+  href="img/svg/Frequence_w.svg"
+  preserveAspectRatio="xMidYMid meet" opacity="0.72"/>
+<text x="700" y="216" text-anchor="start" fill="rgba(255,255,255,0.45)"
+  font-size="10" font-family="system-ui,Arial">en heure de pointe</text>
 
 </g><!-- end clip -->
 </svg>
@@ -304,19 +316,20 @@ ${_starBanner(sR, sG, sF, AM, U)}
 }
 
 /* ══════════════════════════════════════════════════════
-   BANDEAU ÉTOILES  (3 blocs : Régularité | Global | Fréquence)
+   SCORECARD VERTICAL  (zone gauche 148→308)
+   3 blocs empilés : Régularité | Performance globale | Fréquence
 ══════════════════════════════════════════════════════ */
-function _starBanner(sReg, sGlob, sFreq, AM, U) {
-  const BY = 434;  // y départ du bandeau
+function _scorecardVertical(sReg, sGlob, sFreq, AM, U) {
+  /* cx de la zone scorecard */
+  const CX = 228;
 
-  /* Génère les 5 étoiles SVG centrées en (cx, cy) avec une taille `sz` */
+  /* ── Générateur d'étoiles SVG ── */
   function stars(cx, cy, score, sz) {
-    const step  = sz * 2 + 4;
-    const total = 5 * step - 4;
+    const step  = sz * 2 + 3;
+    const total = 5 * step - 3;
     const x0    = cx - total / 2 + sz;
     let out = '';
 
-    /* Chemin étoile 5 branches normalisé (rayon = sz) */
     const P = (s) =>
       `M0,-${s} L${(.267*s).toFixed(1)},-${(.367*s).toFixed(1)} ` +
       `L${(.951*s).toFixed(1)},-${(.309*s).toFixed(1)} ` +
@@ -333,57 +346,101 @@ function _starBanner(sReg, sGlob, sFreq, AM, U) {
     const frac  = scoreClean - full;
 
     for (let n = 1; n <= 5; n++) {
-      const ex   = x0 + (n - 1) * step;
+      const ex  = x0 + (n - 1) * step;
       const path = P(sz);
-      const cid  = `${U}sc${cx}n${n}`;
+      const cid  = `${U}sv${Math.round(cy)}n${n}`;
 
       if (n <= full) {
-        /* Étoile pleine */
         out += `<path transform="translate(${ex},${cy})" d="${path}" fill="${AM}"/>`;
       } else if (n === full + 1 && frac > 0.05) {
-        /* Étoile partielle */
         const pw = frac * sz * 2;
         out += `<defs><clipPath id="${cid}">
           <rect x="${ex - sz}" y="${cy - sz - 2}" width="${pw.toFixed(1)}" height="${sz * 2 + 4}"/>
         </clipPath></defs>`;
         out += `<path transform="translate(${ex},${cy})" d="${path}"
-          fill="rgba(245,165,32,0.12)" stroke="${AM}" stroke-width="0.7"/>`;
+          fill="rgba(245,168,32,0.12)" stroke="${AM}" stroke-width="0.7"/>`;
         out += `<path transform="translate(${ex},${cy})" clip-path="url(#${cid})"
           d="${path}" fill="${AM}"/>`;
       } else {
-        /* Étoile vide */
         out += `<path transform="translate(${ex},${cy})" d="${path}"
-          fill="rgba(245,165,32,0.10)" stroke="${AM}" stroke-width="0.7"/>`;
+          fill="rgba(245,168,32,0.10)" stroke="${AM}" stroke-width="0.7"/>`;
       }
     }
     return out;
   }
 
-  const label = (txt, x, y, w, c='rgba(255,255,255,0.45)', fw='normal', ls='1') =>
-    `<text x="${x}" y="${y}" text-anchor="middle" fill="${c}"
-       font-size="${w}" font-weight="${fw}" letter-spacing="${ls}"
+  const lbl = (txt, y, size, color, fw = 'normal', ls = '0') =>
+    `<text x="${CX}" y="${y}" text-anchor="middle" fill="${color}"
+       font-size="${size}" font-weight="${fw}" letter-spacing="${ls}"
        font-family="system-ui,Arial">${txt}</text>`;
 
+  const sep = (y) =>
+    `<line x1="168" y1="${y}" x2="288" y2="${y}"
+       stroke="rgba(255,255,255,0.07)" stroke-width="0.5"/>`;
+
   return `
-<rect x="148" y="${BY}" width="812" height="70" fill="rgba(0,0,0,0.28)"/>
-<line x1="148" y1="${BY}"   x2="960" y2="${BY}"   stroke="rgba(255,255,255,0.07)" stroke-width="0.5"/>
-<line x1="418" y1="${BY+6}" x2="418" y2="${BY+64}" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
-<line x1="689" y1="${BY+6}" x2="689" y2="${BY+64}" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+<!-- Régularité -->
+${lbl('RÉGULARITÉ', 98, '7.5', 'rgba(255,255,255,0.38)', 'normal', '1.5')}
+${stars(CX, 120, sReg, 6)}
+${lbl(`${sReg.toFixed(1)} / 5`, 140, '9', AM, '600')}
 
-<!-- GAUCHE : Régularité -->
-${label('Régularité', 310, BY+14, '8.5')}
-${stars(310, BY+35, sReg, 6)}
-${label(`${sReg.toFixed(1)} / 5`, 310, BY+58, '9.5', AM, '600')}
+${sep(158)}
 
-<!-- CENTRE : Performance globale -->
-${label('PERFORMANCE GLOBALE', 554, BY+14, '10', 'white', '600', '1.5')}
-${stars(554, BY+35, sGlob, 9)}
-${label(`${sGlob.toFixed(1)} / 5`, 554, BY+58, '13', AM, '700')}
+<!-- Performance globale -->
+${lbl('PERFORMANCE', 180, '9', 'white', '700', '1')}
+${lbl('GLOBALE',     194, '9', 'white', '700', '1')}
+${stars(CX, 222, sGlob, 9)}
+${lbl(`${sGlob.toFixed(1)} / 5`, 246, '14', AM, '700')}
 
-<!-- DROITE : Fréquence -->
-${label('Fréquence', 798, BY+14, '8.5')}
-${stars(798, BY+35, sFreq, 6)}
-${label(`${sFreq.toFixed(1)} / 5`, 798, BY+58, '9.5', AM, '600')}`;
+${sep(262)}
+
+<!-- Fréquence -->
+${lbl('FRÉQUENCE', 280, '7.5', 'rgba(255,255,255,0.38)', 'normal', '1.5')}
+${stars(CX, 302, sFreq, 6)}
+${lbl(`${sFreq.toFixed(1)} / 5`, 322, '9', AM, '600')}`;
+}
+
+/* ══════════════════════════════════════════════════════
+   SKYLINE URBAINE  (bas de la zone contenu)
+   Deux couches de bâtiments + sol, dessinées en SVG pur
+══════════════════════════════════════════════════════ */
+function _skyline(U) {
+  /* Couche arrière : bâtiments plus hauts, teinte légèrement plus claire */
+  const back = [
+    [160,408,18,52],[180,393,14,67],[198,413,22,47],[224,398,16,62],
+    [244,418,20,42],[268,403,12,57],[284,422,26,38],[314,406,14,54],
+    [332,386,18,74],[354,414,24,46],[382,400,16,60],[402,380,20,80],
+    [412,365, 2,18],/* antenne */
+    [426,404,28,56],[458,416,18,44],[480,394,22,66],[506,408,16,52],
+    [526,390,20,70],[550,380,14,80],[568,410,26,50],[598,397,18,63],
+    [620,414,22,46],[646,390,16,70],[666,403,20,57],[690,413,14,47],
+    [708,385,24,75],[736,406,18,54],[758,394,22,66],[784,418,16,42],
+    [804,398,20,62],[828,410,14,50],[846,388,26,72],[876,404,18,56],
+    [898,420,22,40],[924,396,16,64],
+  ];
+
+  /* Couche avant : bâtiments plus bas, plus sombres */
+  const front = [
+    [156,428,24,32],[186,435,30,25],[222,422,20,38],[250,430,28,30],
+    [284,424,18,36],[310,414,34,46],[352,428,22,32],[382,418,26,42],
+    [416,410,30,50],[450,396,36,64],[465,382, 4,18],/* antenne centrale */
+    [492,424,24,36],[524,414,28,46],[560,426,20,34],[588,418,30,42],
+    [626,428,22,32],[656,416,26,44],[690,430,18,30],[716,420,28,40],
+    [752,414,32,46],[792,426,24,34],[824,418,20,42],[852,430,28,30],
+    [888,424,22,36],[918,432,30,28],
+  ];
+
+  const r = (arr, fill) => arr
+    .map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`)
+    .join('\n');
+
+  return `
+<!-- ── Skyline arrière ── -->
+${r(back, '#0d3254')}
+<!-- ── Skyline avant ── -->
+${r(front, '#082338')}
+<!-- ── Sol ── -->
+<rect x="148" y="458" width="812" height="46" fill="#071d2e"/>`;
 }
 
 /* ══════════════════════════════════════════════════════
