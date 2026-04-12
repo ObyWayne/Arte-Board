@@ -2,33 +2,33 @@
   <div class="kpi-banner">
 
     <!-- A1 : Temps aller -->
-    <div class="kpi-card kpi-A1" style="--kpi-color:var(--blue)">
+    <div class="kpi-card kpi-A1 kpi-ico-chrono" style="--kpi-color:var(--blue)">
       <div class="kpi-label" id="kpiLabelTpsA">Tps aller</div>
       <div class="kpi-value" id="kpiTpsA" style="font-size:2rem">—</div>
     </div>
 
     <!-- A2 : Vit. commerciale Aller -->
-    <div class="kpi-card kpi-A2" style="--kpi-color:var(--blue)">
+    <div class="kpi-card kpi-A2 kpi-ico-speed" style="--kpi-color:var(--blue)">
       <div class="kpi-label" id="kpiLabelVitA">Vit. comm.<br>↓ Aller</div>
       <div class="kpi-value" id="kpiVitA">—</div>
       <div class="kpi-sub" id="kpiVitASub"></div>
     </div>
 
     <!-- B1 : Temps retour -->
-    <div class="kpi-card kpi-B1" style="--kpi-color:var(--orange)">
+    <div class="kpi-card kpi-B1 kpi-ico-chrono" style="--kpi-color:var(--orange)">
       <div class="kpi-label" id="kpiLabelTpsR">Tps retour</div>
       <div class="kpi-value" id="kpiTpsR" style="font-size:2rem">—</div>
     </div>
 
     <!-- B2 : Vit. commerciale Retour -->
-    <div class="kpi-card kpi-B2" style="--kpi-color:var(--orange)">
+    <div class="kpi-card kpi-B2 kpi-ico-speed" style="--kpi-color:var(--orange)">
       <div class="kpi-label" id="kpiLabelVitR">Vit. comm.<br>↑ Retour</div>
       <div class="kpi-value" id="kpiVitR">—</div>
       <div class="kpi-sub" id="kpiVitRSub"></div>
     </div>
 
     <!-- C : Cycle complet + Taux d'occupation terminus -->
-    <div class="kpi-card kpi-C" style="--kpi-color:var(--pink);">
+    <div class="kpi-card kpi-C kpi-ico-cycle" style="--kpi-color:var(--pink);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.15rem;">
         <div class="kpi-label" id="kpiCycleLabel" style="margin-bottom:0">Cycle complet</div>
         <button class="fs-btn" onclick="toggleOccupPct()" id="occupPctBtn" title="Basculer %/mm:ss">%</button>
@@ -51,21 +51,21 @@
     </div>
 
     <!-- D1 : Flotte nécessaire (narrow) -->
-    <div class="kpi-card kpi-D1" style="--kpi-color:var(--green)">
+    <div class="kpi-card kpi-D1 kpi-ico-bus" style="--kpi-color:var(--green)">
       <div class="kpi-label" id="kpiLabelFlotte">Flotte<br>nécessaire</div>
       <div class="kpi-value" id="kpiFlotte" style="font-size:2rem">—</div>
       <div class="kpi-sub" id="kpiFlotteSub"></div>
     </div>
 
     <!-- D2 : Capacité SMR (narrow) -->
-    <div class="kpi-card kpi-D2" style="--kpi-color:var(--green)">
+    <div class="kpi-card kpi-D2 kpi-ico-pax" style="--kpi-color:var(--green)">
       <div class="kpi-label" id="kpiLabelSMR">Capacité SMR</div>
       <div class="kpi-value" id="kpiSMR">—</div>
       <div class="kpi-sub" id="kpiSMRSub"></div>
     </div>
 
     <!-- E : Mouvements dépôt -->
-    <div class="kpi-card kpi-E" style="--kpi-color:var(--purple)">
+    <div class="kpi-card kpi-E kpi-ico-depot" style="--kpi-color:var(--purple)">
       <div class="kpi-label" id="kpiLabelDepot">Mouvements dépôt</div>
       <div class="kpi-depot-values">
         <span class="kpi-depot-lbl" id="kpiLabelSorties">↑ Sorties</span>
@@ -114,8 +114,8 @@
       </div>
     </div>
 
-    <!-- G : Courses/jour + Km commerciaux/jour -->
-    <div class="kpi-card kpi-G" style="--kpi-color:var(--red)">
+    <!-- G : Courses/jour + Km commerciaux/jour + Km non commerciaux/jour -->
+    <div class="kpi-card kpi-G kpi-ico-route" style="--kpi-color:var(--red)">
       <div class="kpi-label" id="kpiLabelCourses">Courses / jour</div>
       <div class="kpi-value" id="kpiCourses">—</div>
       <div class="kpi-sub" id="kpiCoursesSub"></div>
@@ -123,6 +123,10 @@
       <div class="kpi-label" id="kpiLabelKmCom">Km commerciaux / jour</div>
       <div class="kpi-value" id="kpiKmCom">—</div>
       <div class="kpi-sub" id="kpiKmComSub"></div>
+      <hr class="kpi-divider">
+      <div class="kpi-label" id="kpiLabelKmNonCom">Km non commerciaux / jour</div>
+      <div class="kpi-value" id="kpiKmNonCom">—</div>
+      <div class="kpi-sub" id="kpiKmNonComSub"></div>
     </div>
 
   </div>
