@@ -80,7 +80,7 @@ function _mtEnsureOverlay(){
     const btnW = document.createElement('button');
     btnW.id        = 'mtBtnWorld';
     btnW.className = 'fs-btn';
-    btnW.title     = 'Vue internationale';
+    btnW.title     = T('mtWorldView');
     btnW.innerHTML = _mtGlobeSVG(11);
     btnW.style.cssText = 'display:flex;align-items:center;padding:.15rem .3rem;';
     btnW.onclick = () => { _mtWorldView = !_mtWorldView; _mtUpdateBtnWorld(); renderMarcheType(); };
@@ -88,7 +88,7 @@ function _mtEnsureOverlay(){
     // Bouton plein écran — exactement .fs-btn avec ⛶
     const btnFs = document.createElement('button');
     btnFs.className = 'fs-btn';
-    btnFs.title     = 'Plein écran';
+    btnFs.title     = T('fullscreenLabel');
     btnFs.textContent = '⛶';
     btnFs.onclick = () => fsOpenMarcheType();
 
@@ -112,10 +112,10 @@ function _mtEnsureOverlay(){
   const colSeg = (typeof BRAND !== 'undefined')
     ? (currentDir === 'aller' ? BRAND.aller : BRAND.retour)
     : (currentDir === 'aller' ? '#4a9eff' : '#f5a623');
-  const dir    = currentDir === 'aller' ? '↓ Aller' : '↑ Retour';
+  const dir    = currentDir === 'aller' ? T('cycleDirOut') : T('cycleDirIn');
   const title  = document.getElementById('mtOvTitle');
   if(title) title.innerHTML =
-    `<span style="color:var(--text2)">Marche type</span>`
+    `<span style="color:var(--text2)">${T('mtTitle')}</span>`
     + `<span style="color:${colSeg};margin-left:.3em">${dir}</span>`;
 
   document.getElementById('mtOverlay').style.display = 'flex';
@@ -400,7 +400,7 @@ function fsOpenMarcheTypeCanvas(canvas){
   if(!canvas || canvas.style.display==='none') return;
   const c = canvas._mtCtx;
   if(!c) return;
-  openFullscreen('Marche type — '+(currentDir==='aller'?'↓ Aller':'↑ Retour'), body=>{
+  openFullscreen(T('mtTitle')+' — '+(currentDir==='aller'?T('cycleDirOut'):T('cycleDirIn')), body=>{
     Object.assign(body.style,{
       padding:'1rem 1.5rem', overflow:'hidden',
       alignItems:'stretch', justifyContent:'flex-start', flexDirection:'column'

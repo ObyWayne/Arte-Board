@@ -107,6 +107,10 @@ const DICT = {
   clockHP:          {fr:'Heure de Pointe',          en:'Peak Hour'},
   clockHC:          {fr:'Heure Creuse',             en:'Off-Peak'},
   clockHS:          {fr:'Hors service',             en:'Out of Service'},
+  // Marche type — overlay + fullscreen
+  mtTitle:          {fr:'Marche type',              en:'Running diagram'},
+  mtWorldView:      {fr:'Vue internationale',       en:'International view'},
+  fullscreenLabel:  {fr:'Plein écran',              en:'Full screen'},
   // MT placeholder
   mtLabel:          {fr:'Image de marche type',     en:'Typical operation diagram'},
   mtSub:            {fr:'Disponible via le fichier Excel', en:'Available via Excel file'},

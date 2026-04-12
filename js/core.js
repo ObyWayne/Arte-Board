@@ -113,14 +113,29 @@ function showEmptyState(){
 }
 
 let GLOBAL_IMAGE_MAP = {}; // images chargées depuis le ZIP
+
+/* ═══════════════════════════════════════════════
+   PLAGES HORAIRES — valeurs par défaut réseau générique
+   Surchargées à l'import si la feuille PLAGES_HORAIRES
+   est présente dans le xlsx (via applyPlagesFromWb).
+   Bornes en minutes depuis minuit (ex: 420 = 07h00).
+═══════════════════════════════════════════════ */
+const _PL_HS1_FIN  = 300;  //  05h00 — fin HS nuit
+const _PL_HC1_FIN  = 420;  //  07h00 — fin HC matin
+const _PL_HP1_FIN  = 540;  //  09h00 — fin HP matin
+const _PL_HC2_FIN  = 1020; //  17h00 — fin HC journée
+const _PL_HP2_FIN  = 1170; //  19h30 — fin HP soir
+const _PL_HC3_FIN  = 1320; //  22h00 — fin HC soir
+// _PL_HS2_FIN = 1440 (minuit) — implicite
+
 let PLAGES = [
-  {type:'HS', debut:0,    fin:300,  freq:null},
-  {type:'HC', debut:300,  fin:420,  freq:null},
-  {type:'HP', debut:420,  fin:540,  freq:null},
-  {type:'HC', debut:540,  fin:1020, freq:null},
-  {type:'HP', debut:1020, fin:1170, freq:null},
-  {type:'HC', debut:1170, fin:1320, freq:null},
-  {type:'HS', debut:1320, fin:1440, freq:null},
+  {type:'HS', debut:0,            fin:_PL_HS1_FIN, freq:null},
+  {type:'HC', debut:_PL_HS1_FIN, fin:_PL_HC1_FIN, freq:null},
+  {type:'HP', debut:_PL_HC1_FIN, fin:_PL_HP1_FIN, freq:null},
+  {type:'HC', debut:_PL_HP1_FIN, fin:_PL_HC2_FIN, freq:null},
+  {type:'HP', debut:_PL_HC2_FIN, fin:_PL_HP2_FIN, freq:null},
+  {type:'HC', debut:_PL_HP2_FIN, fin:_PL_HC3_FIN, freq:null},
+  {type:'HS', debut:_PL_HC3_FIN, fin:1440,         freq:null},
 ];
 
 /* ── Entry point called after all fragments are loaded ── */

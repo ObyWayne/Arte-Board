@@ -37,13 +37,7 @@ function _darkenHex(hex, f) {
   const b = Math.max(0, ( n     &0xff) - Math.round(( n     &0xff) * f));
   return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
 }
-function _lightenHex(hex, f) {
-  const n = parseInt((hex||'#888').replace('#',''), 16);
-  const r = Math.min(255, ((n>>16)&0xff) + Math.round((255-((n>>16)&0xff)) * f));
-  const g = Math.min(255, ((n>>8) &0xff) + Math.round((255-((n>>8) &0xff)) * f));
-  const b = Math.min(255, ( n     &0xff) + Math.round((255-( n     &0xff)) * f));
-  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-}
+/* _lightenHex définie dans render_comp_utils.js */
 
 /* ── Pattern hachuré ── */
 function _hatchPattern(ctx, col) {
@@ -211,7 +205,7 @@ function _getTermTooltip() {
 
 function _showTermTooltip(e, hit, termName) {
   const t = _getTermTooltip();
-  const compressLabel = T('compTermAdjustable');
+  const compressLabel = isEN ? '⏹ Adjustable (compressible)' : '⏹ Temps ajustable (compressible)';
 
   t.innerHTML = `
     <!-- En-tête : terminus + total centré -->
@@ -221,7 +215,7 @@ function _showTermTooltip(e, hit, termName) {
       <div style="font-size:1rem;font-weight:800;color:var(--text);font-family:'Barlow Condensed',sans-serif;">
         ${fmtMmSs(hit.totalSec / 60)}
       </div>
-      <div style="font-size:8.5px;color:var(--text3);">${T('compTermTotal')}</div>
+      <div style="font-size:8.5px;color:var(--text3);">${isEN ? 'Total' : 'Temps total'}</div>
     </div>
     <!-- Détail segment survolé -->
     <div style="display:flex;align-items:flex-start;gap:7px;">
@@ -403,7 +397,7 @@ function _renderTerminus3DChart(container, scData, termName, catalog) {
     <div style="width:16px;height:16px;border-radius:2px;border:1px solid var(--border2);
       background:repeating-linear-gradient(-45deg,rgba(180,190,220,.35) 0px,rgba(180,190,220,.35) 2px,transparent 2px,transparent 6px);
       flex-shrink:0;"></div>
-    ${T('compTermAdjShort')}`;
+    ${isEN ? 'Adjustable (compressible)' : 'Temps compressible (ajustable)'}`;
   leg.appendChild(compEl);
   container.appendChild(leg);
 }
@@ -464,7 +458,7 @@ function renderCompTerminus(all) {
     <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.55rem;">
       <div class="col-picker-wrap">
         <button class="col-picker-btn" onclick="_toggleTermPicker(event,'_tcp2')">
-          ⚙ ${T('compTermScenarios')} ▾
+          ⚙ ${isEN ? 'Scenarios' : 'Scénarios'} ▾
         </button>
         <div class="col-picker-dropdown" id="_tcp2">${scOpts}</div>
       </div>

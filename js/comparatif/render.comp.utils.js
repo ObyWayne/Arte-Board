@@ -1,6 +1,21 @@
 /* ── render.comp.utils.js — Utilitaires + comportements UI partagés ── */
 
 /* ══════════════════════════════════════════════════════
+   COULEUR — UTILITAIRE PARTAGÉ
+   Utilisé par render_comp_radar.js, render_comp_terminus.js,
+   render_comp_energy.js.
+   Éclaircit une couleur hex d'un facteur f ∈ [0,1] vers le blanc.
+   Exemple : _lightenHex('#a06bff', 0.35)
+══════════════════════════════════════════════════════ */
+function _lightenHex(hex, f) {
+  const n = parseInt((hex||'#888').replace('#',''), 16);
+  const r = Math.min(255, ((n>>16)&0xff) + Math.round((255-((n>>16)&0xff)) * f));
+  const g = Math.min(255, ((n>>8) &0xff) + Math.round((255-((n>>8) &0xff)) * f));
+  const b = Math.min(255, ( n     &0xff) + Math.round((255-( n     &0xff)) * f));
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+
+/* ══════════════════════════════════════════════════════
    FERMETURE GLOBALE DES MENUS DÉROULANTS
    • Scroll en dehors du menu  → ferme
    • Clic en dehors du menu   → ferme

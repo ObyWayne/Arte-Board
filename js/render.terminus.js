@@ -1,9 +1,14 @@
 /* ── render.terminus.js — Page terminus, Gantt, treemap ── */
+
+/* ─ Couleurs occupation — non personnalisables via feuille COLOR ─ */
+const OCCUP_COL_OK   = '#22c55e'; // vert  — taux ok
+const OCCUP_COL_WARN = '#f59e0b'; // amber — attention
+const OCCUP_COL_CRIT = '#ef4444'; // rouge — critique
 /* ═══════════════════════════════════════════════
    PAGE TERMINUS
 ═══════════════════════════════════════════════ */
 const occColor    = (pct) => { const s1=window.SETT_OCCUP_S1||20, s2=window.SETT_OCCUP_S2||30; return pct<s1?'var(--green)':pct<s2?'var(--orange)':'var(--red)'; };
-const occColorHex = (pct) => { const s1=window.SETT_OCCUP_S1||20, s2=window.SETT_OCCUP_S2||30; return pct<s1?'#22c55e':pct<s2?'#f59e0b':'#ef4444'; };
+const occColorHex = (pct) => { const s1=window.SETT_OCCUP_S1||20, s2=window.SETT_OCCUP_S2||30; return pct<s1?OCCUP_COL_OK:pct<s2?OCCUP_COL_WARN:OCCUP_COL_CRIT; };
 
 /* Taux d'occupation d'une phase (en sec) pour une fréquence donnée (min) */
 function termOccupPct(phaseSec, freqMin){
@@ -58,7 +63,7 @@ function buildMiniHistoSVG(phaseSec){
   }).join('');
 
   /* Seuils 20% et 30% */
-  const seuils = [{v:20,c:'#22c55e'},{v:30,c:'#f59e0b'}];
+  const seuils = [{v:20,c:OCCUP_COL_OK},{v:30,c:OCCUP_COL_WARN}];
   const seuilSVG = seuils.filter(s=>s.v<maxVal).map(s => {
     const y = PAD.top + yScale(s.v);
     return `<line x1="${PAD.left}" y1="${y.toFixed(1)}" x2="${PAD.left+plotW}" y2="${y.toFixed(1)}" stroke="${s.c}" stroke-width="0.7" stroke-dasharray="2,2" opacity="0.6"/>
@@ -167,7 +172,7 @@ function buildTermHistoSVG(termList){
   const hToY   = (v) => v / maxVal * plotH;
 
   // Lignes de seuil
-  const seuils = [{pct:20,col:'#22c55e'},{pct:30,col:'#f59e0b'},{pct:100,col:'#ef4444'}];
+  const seuils = [{pct:20,col:OCCUP_COL_OK},{pct:30,col:OCCUP_COL_WARN},{pct:100,col:OCCUP_COL_CRIT}];
   let seuilLines = seuils.map(s => {
     const y = PAD.top + yScale(s.pct);
     if(s.pct > maxVal) return '';
@@ -235,7 +240,7 @@ function buildTermHistoSVG(termList){
 function buildTrainIcon(pct, col, size=48){
   if(pct > 100){
     const surplus = pct - 100;
-    const surplusCol = '#ef4444';
+    const surplusCol = OCCUP_COL_CRIT;
     return `<div style="display:flex;gap:2px;align-items:flex-end;">${_trainSvg(100, col, size)}${_trainSvg(surplus, surplusCol, size)}</div>`;
   }
   return _trainSvg(pct, col, size);
@@ -363,7 +368,7 @@ function renderTerminus(){
       return `<div class="term-histo-col">
         <div class="term-histo-header">
           <div class="term-histo-title">${title}</div>
-          <button class="fs-btn" onclick="fsOpenTermHisto(this.closest('.term-histo-col').querySelector('.term-histo-svg-wrap').innerHTML, '${title.replace(/'/g,"\\'")} — ${nom}')" title="Plein écran">⛶</button>
+          <button class="fs-btn" onclick="fsOpenTermHisto(this.closest('.term-histo-col').querySelector('.term-histo-svg-wrap').innerHTML, '${title.replace(/'/g,"\\'")} — ${nom}')" title="${T('fullscreenLabel')}">⛶</button>
         </div>
         <div class="term-histo-svg-wrap">${buildMiniHistoSVG(sec)}</div>
         <div style="font-size:.42rem;color:var(--text3);font-family:var(--fontb);margin-top:.15rem;opacity:.7">${detail || fmtMin(sec/60)}</div>

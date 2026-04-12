@@ -1076,7 +1076,8 @@ function computeKPIs(scIdx){
 
   return {tAllerMin,tRetourMin,tRetMin,tCycleMin,flotteNec,flotteTot,vitA,vitR,
           freqHP,freqHC,tauxUtil,coursesJour,totalDistKm,serviceH,tronconKPIs,
-          tArretTotal,kmCom,sorties,entrees,depotMouvements,vehParPlage};
+          tArretTotal,kmCom,sorties,entrees,depotMouvements,vehParPlage,
+          sp}; // sp exposé pour éviter un double appel dans renderKPIs
 }
 
 function renderOccupKPI(){
@@ -1114,7 +1115,7 @@ function renderKPIs(scIdx){
   if(!LINE) return;
   const k  = computeKPIs(scIdx);
   const sc = LINE.scenarios[scIdx];
-  const sp = computeSPTroncons(sc, LINE);
+  const sp = k.sp; // déjà calculé dans computeKPIs — pas de double appel
   const isSPMilieu = sp.isSP && !sp.isFinDeLigne && sp.troncons.length >= 2;
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.innerHTML=v; };
 
@@ -1228,4 +1229,3 @@ set('kpiTpsRSub', '');
   set('kpiKmCom',      `${k.kmCom.toLocaleString('fr-FR')} km`);
   set('kpiKmComSub',   `${k.coursesJour} ${T('tripsKm').replace('{d}',k.totalDistKm.toFixed(1))}`  );
 }
-

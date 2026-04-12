@@ -15,19 +15,12 @@ function _radarColors() {
     BRAND.primaire1 || '#a06bff',
     BRAND.primaire2 || '#3ecf6a',
     BRAND.cycle     || '#cf3e9e',
-    _lighten(BRAND.primaire1 || '#a06bff', 0.35),
-    _lighten(BRAND.primaire2 || '#3ecf6a', 0.30),
-    _lighten(BRAND.cycle     || '#cf3e9e', 0.30),
+    _lightenHex(BRAND.primaire1 || '#a06bff', 0.35),
+    _lightenHex(BRAND.primaire2 || '#3ecf6a', 0.30),
+    _lightenHex(BRAND.cycle     || '#cf3e9e', 0.30),
   ];
 }
-/* Éclaircit une couleur hex d'un facteur 0-1 */
-function _lighten(hex, f) {
-  const n = parseInt(hex.replace('#',''), 16);
-  const r = Math.min(255, ((n>>16)&0xff) + Math.round((255 - ((n>>16)&0xff)) * f));
-  const g = Math.min(255, ((n>>8) &0xff) + Math.round((255 - ((n>>8) &0xff)) * f));
-  const b = Math.min(255, ( n     &0xff) + Math.round((255 - ( n     &0xff)) * f));
-  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-}
+/* _lightenHex définie dans render_comp_utils.js */
 
 /* ── D : Catalogue complet d'axes ── */
 const RADAR_ALL_AXES = [
