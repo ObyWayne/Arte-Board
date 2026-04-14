@@ -287,7 +287,7 @@ async function handleZip(file, slot){
     let masterMeta = {departH:6,departM:5,serviceHeures:18};
     let masterCarousel = [];
     let masterInfra = [];
-    let LINE_PROGRAMME_MOE = {};
+    window.LINE_PROGRAMME_MOE = {};
     const masterEntry = xlsxEntries['master'];
     if(masterEntry){
       const masterBuf = await masterEntry.async('arraybuffer');
@@ -296,7 +296,8 @@ async function handleZip(file, slot){
       parseCarouselSheet(masterWb, imageMap);
       masterCarousel = [...CAROUSEL_SLIDES];
       masterInfra = parseInfraSchema(masterWb); // feuille INFRA dans master
-      LINE_PROGRAMME_MOE = parseProgrammeMOE(masterWb);
+      window.LINE_PROGRAMME_MOE = parseProgrammeMOE(masterWb);
+      //LINE_PROGRAMME_MOE = parseProgrammeMOE(masterWb);
       parseColors(masterWb);
       applyBrandColors();
     }
@@ -360,6 +361,7 @@ async function handleZip(file, slot){
       detenteA:     d0.detenteA,
       detenteR:     d0.detenteR,
       infra:        d0.infra || [],
+      programmeMOE: window.LINE_PROGRAMME_MOE,
     };
 
     if(isRef){
