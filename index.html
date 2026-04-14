@@ -238,6 +238,11 @@
             <option value="60">60 min</option>
           </select>
         </div>
+      </div>
+      
+      <!-- Section : Terminus -->
+      <div class="settings-section">
+        <div class="settings-section-title" id="settSecFormulas">Terminus</div>
         <div class="settings-row">
           <label class="settings-label" id="settLblGanttStep">Pas axe Gantt terminus (min)</label>
           <select class="settings-select" id="settGanttStep" onchange="applySettings()">
@@ -246,15 +251,6 @@
             <option value="10">10 min</option>
             <option value="15">15 min</option>
           </select>
-        </div>
-      </div>
-
-      <!-- Section : Formules -->
-      <div class="settings-section">
-        <div class="settings-section-title" id="settSecFormulas">Formules</div>
-        <div class="settings-row">
-          <label class="settings-label" id="settLblCoeff">Coeff. marche tendue</label>
-          <input type="number" class="settings-input-num" id="settCoeff" value="1.10" min="1.0" max="2.0" step="0.01" onchange="applySettings()">
         </div>
         <div class="settings-row">
           <label class="settings-label" id="settLblOccupSeuil1">Seuil occup. vert (%)</label>

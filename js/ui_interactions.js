@@ -97,6 +97,7 @@ function ganttSegEnter(el, evt){
   const tt = document.getElementById('pieTooltip');
   if(!tt) return;
   tt.style.background = el.dataset.col;
+  const busNum = el.dataset.bus != null ? ` — Bus N°${el.dataset.bus}` : '';
   document.getElementById('ptIcon').textContent  = '🚉';
   document.getElementById('ptLabel').textContent = el.dataset.label;
   document.getElementById('ptVal').textContent   = el.dataset.total;
@@ -106,7 +107,7 @@ function ganttSegEnter(el, evt){
   el.addEventListener('mousemove', _movePieTooltip);
 }
 function ganttSegLeave(el){
-  el.style.opacity = '.82';
+  el.style.opacity = el.dataset.baseOpacity || '.82';
   el.style.filter  = '';
   const tt = document.getElementById('pieTooltip');
   if(tt) tt.style.display = 'none';
@@ -388,38 +389,94 @@ function fsOpenGantt(ganttId, nom){
 /* ═══════════════════════════════════════════════
    GANTT D'OCCUPATION DES VOIES
 ═══════════════════════════════════════════════ */
-function buildTermGantt(ret, nom){
+function buildTermGantt(ret, nom, groupData){
   if(!ret || !ret.params || !ret.params.length) return '';
 
   const sc       = LINE && LINE.scenarios[currentSc];
   const freqMin  = sc ? (sc.freqHP || sc.freqMin || 6) : 6;
   const freqSec  = freqMin * 60;
   const axisStepMin = (()=>{ const el=document.getElementById('settGanttStep'); return el?(parseInt(el.value)||5):5; })();
-  const col      = BRAND.primaire2 || '#3ecf6a';
+  // Palette cyclique par bus — chaque trainIdx a sa propre teinte
+  // Palette monochrome générée depuis la couleur de marque — même teinte, luminosités variées
+  const _h2hsl = hex => {
+    const n=parseInt((hex||'#3b82f6').replace('#',''),16);
+    let r=(n>>16&255)/255, g=(n>>8&255)/255, b=(n&255)/255;
+    const mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2;
+    if(mx===mn) return [0,0,l*100];
+    const d=mx-mn, s=l>0.5?d/(2-mx-mn):d/(mx+mn);
+    const h={[r]:(g-b)/d+(g<b?6:0),[g]:(b-r)/d+2,[b]:(r-g)/d+4}[mx]/6;
+    return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+  };
+  const _hsl2hex = (h,s,l) => {
+    s/=100; l/=100;
+    const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l);
+    const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+    return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');
+  };
+  const [_bh, _bs] = _h2hsl(BRAND.primaire2 || '#3b82f6');
+  // 6 variantes : même teinte, même saturation, luminosités de 30% à 70%
+  const _BUS_COLORS = [45, 58, 35, 65, 40, 55].map(lv => _hsl2hex(_bh, _bs, lv));
+  const busCol = (idx) => _BUS_COLORS[idx % _BUS_COLORS.length];
 
   const sorted = [...ret.params].sort((a,b)=>{
-    if(a.ordre!=null&&b.ordre!=null) return a.ordre-b.ordre; return 0;
-  });
+  if(a.ordre!=null&&b.ordre!=null) return a.ordre-b.ordre; return 0;
+});
 
-  const seqSec      = sorted.reduce((a,p)=>a+p.sec, 0);
-  const durationSec = 3600; // Gantt sur 1 heure
-  const voiesSet    = [...new Set(sorted.map(p=>(p.voie||'').trim()||p.label))];
+// Map occKey → nPos sélectionné dans les histos
+  const occNPos = new Map((groupData||[]).map(g => [g.occKey, g.nPos]));
 
-  // Construction des séquences (1 train par fréquence)
-  const buildSeq = (offsetSec, trainIdx) => {
-    const slots = [];
-    let cursor = offsetSec;
+// ── Parse les alternatives d'une voie : "Voie 1&Voie 2&Voie 3" → ['Voie 1','Voie 2','Voie 3']
+// Si une seule voie (pas de &), comportement identique à avant
+const parseVoies = p => {
+  const raw    = (p.voie||'').trim() || p.label;
+  const alts   = raw.split('&').map(v => v.trim()).filter(Boolean);
+  const occKey = (p.occ||'').trim() || 'Autre';
+  const nPos   = occNPos.get(occKey) || 1;
+  return alts.slice(0, nPos); // limiter aux N premières voies sélectionnées
+};
+
+const seqSec      = sorted.reduce((a,p) => a + p.sec, 0);
+const durationSec = 3600;
+// voiesSet : on explose toutes les alternatives pour avoir une ligne par voie physique
+const voiesSet    = [...new Set(sorted.flatMap(p => parseVoies(p)))];
+
+// ── Assignation dynamique : chaque bus prend la première position libre ──
+// Pour un step "Voie 1&Voie 2" : essaie Voie 1, si occupée → Voie 2, etc.
+// Si toutes occupées → fallback sur la 1ère (conflit visible)
+const _voieFreeAt     = new Map(); // voie → seconde à partir de laquelle elle est libre
+  const _busVoie        = new Map(); // trainIdx → dernière voie multi-position assignée
+  const _allSlots       = [];
+
+  for (let t = 0, idx = 0; t < durationSec; t += freqSec, idx++) {
+    let cursor = t;
+    _busVoie.delete(idx); // ce bus commence une nouvelle séquence
+
     sorted.forEach(p => {
-      const voie = (p.voie||'').trim()||p.label;
-      slots.push({voie, start:cursor, end:cursor+p.sec, label:p.label, sec:p.sec, trainIdx});
+      const alts      = parseVoies(p);
+      const stuckVoie = _busVoie.get(idx); // voie mémorisée depuis une phase précédente
+
+      let chosenVoie;
+      if (stuckVoie && alts.includes(stuckVoie)) {
+        // Le bus reste sur sa voie courante — même physique, pas besoin de libération
+        chosenVoie = stuckVoie;
+      } else {
+        // Nouvelle assignation : première voie libre dans les alternatives
+        chosenVoie = alts.find(v => cursor >= (_voieFreeAt.get(v) || 0)) || alts[0];
+        // Mémoriser uniquement si c'est une voie "à choix" (plusieurs alternatives)
+        if (alts.length > 1) _busVoie.set(idx, chosenVoie);
+      }
+
+      _allSlots.push({ voie: chosenVoie, start: cursor, end: cursor + p.sec,
+                       label: p.label, sec: p.sec, trainIdx: idx });
+      _voieFreeAt.set(chosenVoie, cursor + p.sec);
       cursor += p.sec;
     });
-    return slots;
-  };
+  }
 
-  const trains = [];
-  for(let t=0, idx=0; t<durationSec; t+=freqSec, idx++)
-    trains.push(buildSeq(t, idx));
+// Reconstruction par train (compatibilité avec la détection de conflits ci-dessous)
+const trains = [];
+for (let i = 0; i * freqSec < durationSec; i++) trains.push([]);
+_allSlots.forEach(s => { if (trains[s.trainIdx]) trains[s.trainIdx].push(s); });
 
   // Détection des conflits par voie
   const voieConflictZones = {};
@@ -443,11 +500,12 @@ function buildTermGantt(ret, nom){
   const anyConflict = Object.values(voieHasConflict).some(Boolean);
 
   // Dimensions
-  const availPx = Math.max(600, (window.innerWidth||1400)-320);
+const LABEL_W  = 80;
+  const OCC_W    = 90;
+  const PCT_W    = 46;
+  const availPx  = Math.max(600, (window.innerWidth||1400)-320 - LABEL_W - OCC_W - PCT_W);
   const CELL     = availPx / durationSec;
   const toX      = sec => sec * CELL;
-  const LABEL_W  = 80;
-  const PCT_W    = 46;
   const ROW_MAIN = 20;
   const ROW_SUB  = 15;
   const HEADER_H = 26;
@@ -459,6 +517,13 @@ function buildTermGantt(ret, nom){
     const dur = Math.min(s.end,durationSec)-Math.max(s.start,0);
     if(dur>0) voieOccup[s.voie]=(voieOccup[s.voie]||0)+dur;
   }));
+
+  // Map voie → occKey (première correspondance trouvée dans sorted)
+  const voieOcc = new Map();
+  sorted.forEach(p => {
+    const occKey = (p.occ||'').trim() || 'Autre';
+    parseVoies(p).forEach(v => { if(!voieOcc.has(v)) voieOcc.set(v, occKey); });
+  });
 
   // Ticks axe
   const tickStepSec = axisStepMin*60;
@@ -483,7 +548,7 @@ function buildTermGantt(ret, nom){
     </div>`
   ).join('');
 
-  const rows = voiesSet.map(voie => {
+ const rows = voiesSet.map((voie, vi) => {
     const pct    = Math.round((voieOccup[voie]||0)/durationSec*100);
     const pctCol = occColorHex(Math.min(pct,100));
     const hasC   = voieHasConflict[voie];
@@ -501,36 +566,59 @@ function buildTermGantt(ret, nom){
     const voieSlots = trains.flatMap(t=>t).filter(s=>s.voie===voie&&s.start<durationSec);
 
     const segHtml = voieSlots.map(s=>{
-      const subLine  = hasC ? (s.trainIdx % 2) : 0;
-      const yTop     = subLine===0 ? 1 : ROW_MAIN + 2;
-      const segH     = subLine===0 ? ROW_MAIN-2 : ROW_SUB-2;
+      const subLine    = hasC ? (s.trainIdx % 2) : 0;
+      const yTop       = subLine===0 ? 1 : ROW_MAIN + 2;
+      const segH       = subLine===0 ? ROW_MAIN-2 : ROW_SUB-2;
       const inConflict = cZones.some(z=>s.start<z.end&&s.end>z.start);
-      const segCol   = inConflict ? COLOR_CONFLICT : col;
+      const segCol     = inConflict ? COLOR_CONFLICT : busCol(s.trainIdx);
+      const opacity    = inConflict ? '.9' : '.85';
       const x = toX(s.start).toFixed(1);
       const w = Math.max(1, toX(Math.min(s.end,durationSec)-s.start)-0.5).toFixed(1);
-
+      const numLabel = parseFloat(w) > 20
+        ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+            font-size:7px;font-weight:900;color:rgba(255,255,255,.8);
+            font-family:var(--fontb);pointer-events:none;line-height:1;">${s.trainIdx+1}</span>`
+        : '';
       return `<div style="position:absolute;left:${x}px;top:${yTop}px;width:${w}px;height:${segH}px;
-        background:${segCol};opacity:${inConflict?'.9':'.82'};border-radius:2px;cursor:pointer;"
-        data-label="${s.label}"
-        data-total="${secToStr(s.sec)}"
+        background:${segCol};opacity:${opacity};border-radius:2px;cursor:pointer;overflow:hidden;"
+        data-label="${s.label}" data-total="${secToStr(s.sec)}"
         data-start="${Math.floor(s.start/60)}min${String(s.start%60).padStart(2,'0')}s"
         data-end="${Math.floor(Math.min(s.end,durationSec)/60)}min${String(Math.min(s.end,durationSec)%60).padStart(2,'0')}s"
-        data-col="${segCol}"
-        onmouseenter="ganttSegEnter(this,event)" onmouseleave="ganttSegLeave(this)"></div>`;
+        data-col="${segCol}" data-bus="${s.trainIdx+1}" data-base-opacity="${opacity}"
+        onmouseenter="ganttSegEnter(this,event)" onmouseleave="ganttSegLeave(this)">${numLabel}</div>`;
     }).join('');
 
-    return `<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--border);">
+
+    // Bordures : pas de bordure inférieure si la voie suivante partage le même occKey
+    const thisOcc = voieOcc.get(voie) || '';
+    const nextOcc = voieOcc.get(voiesSet[vi+1]) || null;
+    const sameGroupAsNext = nextOcc !== null && nextOcc === thisOcc;
+    const rowBorder  = sameGroupAsNext ? 'none' : '1px solid var(--border)';
+
+    // Colonne occ : afficher le label uniquement sur la première voie du groupe
+    const prevOcc = voieOcc.get(voiesSet[vi-1]) || null;
+    const isFirstOfGroup = prevOcc !== thisOcc;
+    const occLabel = isFirstOfGroup ? thisOcc : '';
+
+    return `<div style="display:flex;align-items:stretch;border-bottom:${rowBorder};">
       <div style="width:${LABEL_W}px;flex-shrink:0;font-size:.52rem;font-family:var(--fontb);font-weight:800;
-        color:var(--text);padding:0 .4rem;display:flex;align-items:center;border-right:1px solid var(--border);">${voie}</div>
+        color:var(--text);padding:0 .4rem;display:flex;align-items:center;
+        border-right:1px solid var(--border);">${voie}</div>
+      <div style="width:${OCC_W}px;flex-shrink:0;font-size:.46rem;font-family:var(--fontb);font-weight:700;
+        color:var(--text3);padding:0 .4rem;display:flex;align-items:center;
+        border-right:1px solid var(--border);letter-spacing:.04em;
+        text-transform:uppercase;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"
+        title="${thisOcc}">${occLabel}</div>
       <div style="position:relative;width:${toX(durationSec).toFixed(1)}px;flex-shrink:0;height:${rowH}px;background:var(--bg4);">
         ${vticks}${cZoneBg}${segHtml}
       </div>
       <div style="width:${PCT_W}px;flex-shrink:0;font-size:.6rem;font-weight:800;color:${pctCol};
-        font-family:var(--fontb);display:flex;align-items:center;justify-content:center;border-left:1px solid var(--border);">${pct}%</div>
+        font-family:var(--fontb);display:flex;align-items:center;justify-content:center;
+        border-left:1px solid var(--border);">${pct}%</div>
     </div>`;
   }).join('');
 
-  const totalW  = LABEL_W + toX(durationSec) + PCT_W;
+  const totalW = LABEL_W + OCC_W + toX(durationSec) + PCT_W;
   const ganttId = 'gantt_'+nom.replace(/[^a-z0-9]/gi,'_');
 
   const conflictBanner = anyConflict
@@ -542,6 +630,7 @@ function buildTermGantt(ret, nom){
 
   const header = `<div style="display:flex;border-bottom:2px solid var(--border);">
     <div style="width:${LABEL_W}px;flex-shrink:0;border-right:1px solid var(--border);"></div>
+    <div style="width:${OCC_W}px;flex-shrink:0;border-right:1px solid var(--border);"></div>
     <div style="position:relative;width:${toX(durationSec).toFixed(1)}px;flex-shrink:0;height:${HEADER_H}px;">
       ${headerTicks}${conflictMarkers}
     </div>
@@ -552,7 +641,14 @@ function buildTermGantt(ret, nom){
 
   return `<div class="term-gantt-wrap" id="${ganttId}">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
-      <div class="term-gantt-title" style="margin:0;">${T('trackOccupancy')} — ${nom}</div>
+      <div>
+        <div class="term-gantt-title" style="margin:0;">${T('trackOccupancy')} — ${nom}</div>
+        ${(groupData||[]).filter(g => g.maxPos > 1).map(g =>
+          `<div style="font-size:.42rem;color:var(--text3);font-family:var(--fontb);line-height:1.6;margin-top:.1rem;">
+            ${g.occKey} — ${g.nPos} ${isEN ? 'lane'+(g.nPos>1?'s':'') : 'voie'+(g.nPos>1?'s':'')}
+          </div>`
+        ).join('')}
+      </div>
       <div style="display:flex;align-items:center;gap:.4rem;">
         <div style="font-size:.43rem;color:var(--text3);font-family:var(--fontb);">f=${freqMin}min · séq=${Math.round(seqSec/60*10)/10}min</div>
         <button class="fs-btn" onclick="fsOpenGantt('${ganttId.replace(/'/g,"\\'")}','${nom.replace(/'/g,"\\'")}')">⛶</button>

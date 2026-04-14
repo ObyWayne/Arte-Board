@@ -27,14 +27,15 @@ function refFreqHP(){
 }
 
 /* ─── Mini histogramme SVG pour UNE phase, par plage horaire ─── */
-function buildMiniHistoSVG(phaseSec){
-  // Résout la fréquence de chaque plage : valeur explicite sinon fallback sur sc.freqHP/HC
+function buildMiniHistoSVG(phaseSec, nPos){
+  // nPos : nombre de positions disponibles pour cette phase
+  // Avec 2 positions, chaque voie ne reçoit qu'un bus sur deux → occupation divisée par nPos
+  const _nPos = (nPos && nPos > 1) ? nPos : 1;
+
   const sc = LINE && LINE.scenarios[currentSc];
   const freqHP = sc ? (sc.freqHP || sc.freqMin || 10) : 10;
   const freqHC = sc ? (sc.freqHC || freqHP * 2) : freqHP * 2;
 
-  // Pour l'occupation terminus on utilise TOUJOURS sc.freqHP/HC (fréquence cible du scénario)
-  // PLAGES.freq sert uniquement à l'affichage de l'horloge, pas au calcul d'occupation
   const plagesActives = PLAGES
     .map(p => ({
       ...p,
@@ -48,7 +49,8 @@ function buildMiniHistoSVG(phaseSec){
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top  - PAD.bottom;
 
-  const vals   = plagesActives.map(p => termOccupPct(phaseSec, p.freqRes) ?? 0);
+  // Division par nPos : avec N positions parallèles, chaque position n'est occupée que 1/N du temps
+  const vals   = plagesActives.map(p => termOccupPct(phaseSec / _nPos, p.freqRes) ?? 0);
   const maxVal = Math.max(...vals, 100) * 1.1;  // au moins 100%, marge 10% au-dessus du max
 
   const yScale = v => plotH - (v / maxVal * plotH);
@@ -62,8 +64,10 @@ function buildMiniHistoSVG(phaseSec){
     return `<line x1="${PAD.left}" y1="${y.toFixed(1)}" x2="${PAD.left+plotW}" y2="${y.toFixed(1)}" stroke="currentColor" stroke-width="0.3" opacity="0.1"/>`;
   }).join('');
 
-  /* Seuils 20% et 30% */
-  const seuils = [{v:20,c:OCCUP_COL_OK},{v:30,c:OCCUP_COL_WARN}];
+  const seuils = [
+    {v: window.SETT_OCCUP_S1||20, c:OCCUP_COL_OK},
+    {v: window.SETT_OCCUP_S2||30, c:OCCUP_COL_WARN}
+  ];
   const seuilSVG = seuils.filter(s=>s.v<maxVal).map(s => {
     const y = PAD.top + yScale(s.v);
     return `<line x1="${PAD.left}" y1="${y.toFixed(1)}" x2="${PAD.left+plotW}" y2="${y.toFixed(1)}" stroke="${s.c}" stroke-width="0.7" stroke-dasharray="2,2" opacity="0.6"/>
@@ -91,7 +95,7 @@ function buildMiniHistoSVG(phaseSec){
     const bx  = cx - barW/2;
     const bh  = hToY(v);
     const by  = PAD.top + yScale(v);
-    const col = occColorHex(v);
+    const col = v > 100 ? '#000000' : occColorHex(v);
 
     bars += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" opacity="0.88" rx="1.5"/>`;
     if(v > 4) bars += `<text x="${cx.toFixed(1)}" y="${(by-2).toFixed(1)}" text-anchor="middle" font-size="6" fill="${col}" font-weight="700">${v}%</text>`;
@@ -318,64 +322,119 @@ function renderTerminus(){
 
   /* Construit une ligne complète pour un terminus */
   const buildRow = ({nom, dir, ret, imgName}) => {
-    const totalMin = ret.totalSec / 60;
-    const occupPct = termOccupPct(ret.totalSec, freqRef) ?? 0;
-    const col      = occColor(occupPct);
 
-    /* Card info */
-    const paramsHTML = ret.params.map(p =>
-      `<div class="term-param-row">
-        <span class="term-param-label">${p.label}</span>
-        <span class="term-param-val">${fmtMin(p.sec/60)}</span>
-      </div>`
-    ).join('');
+    if (!window._termNPos) window._termNPos = {};
+    const nomKey = nom.replace(/\W/g, '_');
+
+    const _occMap   = new Map();
+    const _occOrder = [];
+    ret.params.forEach(p => {
+      const key = (p.occ || '').trim() || 'Autre';
+      if (!_occMap.has(key)) { _occMap.set(key, []); _occOrder.push(key); }
+      _occMap.get(key).push(p);
+    });
+
+    const _groupData = _occOrder.map(occKey => {
+      const params   = _occMap.get(occKey);
+      const sec      = params.reduce((a, p) => a + p.sec, 0);
+      const maxPos   = Math.max(1, ...params.map(p => ((p.voie||'').trim()||'').split('&').length));
+      const stateKey = `${nomKey}__${occKey.replace(/\W/g,'_')}`;
+      if (window._termNPos[stateKey] == null) window._termNPos[stateKey] = maxPos;
+      const nPos     = Math.min(window._termNPos[stateKey], maxPos);
+      const detail   = params.map(p => `${p.label} ${fmtMin(p.sec/60)}`).join(' + ');
+      return { occKey, params, sec, maxPos, nPos, stateKey, detail };
+    });
+
+    const freqHP      = refFreqHP();
+    const maxOccupPct = Math.max(0, ..._groupData.map(g => termOccupPct(g.sec / g.nPos, freqHP) ?? 0));
+    const cardCol     = occColor(maxOccupPct);
+
+    const nParams  = ret.params.length;
+    const paramsHTML = ret.params.map((p, i) => {
+      const topLine    = i > 0
+        ? `<div style="width:2px;height:6px;background:var(--border2);"></div>`
+        : `<div style="width:2px;height:6px;"></div>`;
+      const bottomLine = i < nParams - 1
+        ? `<div style="width:2px;flex:1;min-height:6px;background:var(--border2);"></div>`
+        : `<div style="width:2px;flex:1;min-height:6px;"></div>`;
+      return `<div style="display:flex;align-items:stretch;gap:.5rem;">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:20px;">
+          ${topLine}
+          <div style="width:18px;height:18px;border-radius:50%;background:transparent;
+            border:2px solid ${BRAND.primaire1||'var(--blue2)'};
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;
+            font-size:.44rem;font-weight:900;color:${BRAND.primaire1||'var(--blue2)'};font-family:var(--fontb);">${i+1}</div>
+          ${bottomLine}
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex:1;padding:.15rem 0;">
+          <span class="term-param-label">${p.label}</span>
+          <span class="term-param-val">${fmtMin(p.sec/60)}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Sélecteurs voies — uniquement les groupes avec plusieurs positions
+    const voieSelectorsHTML = _groupData
+      .filter(g => g.maxPos > 1)
+      .map(g => {
+        const opts = Array.from({length: g.maxPos}, (_, i) => i + 1)
+          .map(n => `<option value="${n}" ${n===g.nPos ? 'selected' : ''}>${n} ${n>1 ? (isEN?'lanes':'voies') : (isEN?'lane':'voie')}</option>`)
+          .join('');
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem;">
+          <span style="font-size:.48rem;font-weight:700;color:var(--text3);font-family:var(--fontb);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.occKey}</span>
+          <select onchange="window._setTermNPos('${g.stateKey}', parseInt(this.value))"
+            class="settings-select" style="flex-shrink:0;">${opts}</select>
+        </div>`;
+      }).join('');
 
     const card = `<div class="term-card" style="--kpi-color:var(--purple)">
       <div class="term-card-name">${nom}</div>
       <div class="term-card-dir">${dir}</div>
       <div class="term-card-params">${paramsHTML}</div>
+      ${voieSelectorsHTML ? `<hr class="term-card-divider"><div style="display:flex;flex-direction:column;gap:.3rem;">${voieSelectorsHTML}</div>` : ''}
       <hr class="term-card-divider">
       <div class="term-total-row">
         <span class="term-total-label">Σ ${T('termTotal')}</span>
-        <span><span class="term-total-val">${fmtMin(totalMin)}</span><span class="term-total-unit">mm:ss</span></span>
+        <span><span class="term-total-val">${fmtMin(ret.totalSec/60)}</span><span class="term-total-unit">mm:ss</span></span>
       </div>
       <div class="term-occup-bar-wrap" style="display:flex;align-items:center;gap:.6rem;margin-top:.35rem;">
-        ${buildTrainIcon(occupPct, col, 44)}
+        ${buildTrainIcon(maxOccupPct, cardCol, 44)}
         <div style="flex:1;min-width:0;">
-          <div style="font-size:.46rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);font-family:var(--fontb);margin-bottom:.1rem;">${T('termOccupCycle')} HP (${freqRef}min)</div>
-          <div style="font-size:1.1rem;font-weight:800;color:${col};font-family:var(--fontb);line-height:1;">${occupPct}%</div>
+          <div style="font-size:.46rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);font-family:var(--fontb);margin-bottom:.1rem;">${T('termOccupCycle')} HP (${freqHP}min)</div>
+          <div style="font-size:1.1rem;font-weight:800;color:${cardCol};font-family:var(--fontb);line-height:1;">${maxOccupPct}%</div>
         </div>
       </div>
     </div>`;
 
-    /* 3 mini histogrammes — regroupement par valeur de la colonne Occ */
-    const OCC_KEYS = [
-      { match: ['arrivées','arrivees','arrivée','arrivee'], key:'termPhaseArrival'   },
-      { match: ['retournement','manœuvre','manoeuvre'],      key:'termPhaseYard'      },
-      { match: ['départ','depart'],                          key:'termPhaseDeparture' },
-    ];
-    const histos = OCC_KEYS.map((item) => {
-      const match = item.match;
-      const title = T(item.key);
-      const filtered = ret.params.filter(p => match.includes((p.occ||p.label||'').toLowerCase().trim()));
-      const sec = filtered.reduce((a,p)=>a+p.sec, 0);
-      /* fallback si aucune Occ définie : on prend tous les params pour le 1er graphique */
-      const secFinal = (filtered.length === 0 && match === OCC_KEYS[0].match)
-        ? ret.totalSec : sec;
-      const detail = filtered.length
-        ? filtered.map(p=>`${p.label} ${fmtMin(p.sec/60)}`).join(' + ')
-        : (sec===0 ? '—' : '');
-      return `<div class="term-histo-col">
+    const nHistos  = _groupData.length;
+    const colStyle = nHistos <= 3
+      ? 'flex-shrink:0;width:calc((100% - 1rem) / 3);'
+      : 'flex-shrink:0;width:230px;';
+
+    const histosHTMLFinal = _groupData.map(g => {
+
+      return `<div class="term-histo-col" style="${colStyle}">
         <div class="term-histo-header">
-          <div class="term-histo-title">${title}</div>
-          <button class="fs-btn" onclick="fsOpenTermHisto(this.closest('.term-histo-col').querySelector('.term-histo-svg-wrap').innerHTML, '${title.replace(/'/g,"\\'")} — ${nom}')" title="${T('fullscreenLabel')}">⛶</button>
+          <div class="term-histo-title">${g.occKey}</div>
+          <button class="fs-btn" onclick="fsOpenTermHisto(this.closest('.term-histo-col').querySelector('.term-histo-svg-wrap').innerHTML,'${g.occKey.replace(/'/g,"\\'")} — ${nom.replace(/'/g,"\\'")}')">⛶</button>
         </div>
-        <div class="term-histo-svg-wrap">${buildMiniHistoSVG(sec)}</div>
-        <div style="font-size:.42rem;color:var(--text3);font-family:var(--fontb);margin-top:.15rem;opacity:.7">${detail || fmtMin(sec/60)}</div>
+        ${g.maxPos > 1 ? `<div style="font-size:.46rem;font-weight:700;color:var(--text3);font-family:var(--fontb);line-height:1.3;">${g.nPos} ${g.nPos>1?(isEN?'lanes':'voies'):(isEN?'lane':'voie')}</div>` : ''}
+        <div class="term-histo-svg-wrap">${buildMiniHistoSVG(g.sec, g.nPos)}</div>
       </div>`;
     }).join('');
 
-    /* Image */
+    const histosWrap = nHistos <= 3
+      ? `<div class="term-histos-zone" style="display:flex;justify-content:center;gap:.5rem;align-items:stretch;">
+           ${histosHTMLFinal}
+         </div>`
+      : `<div class="term-histos-zone" style="overflow-x:auto;overflow-y:visible;
+           scrollbar-width:thin;scrollbar-color:var(--border2) transparent;">
+           <div style="display:flex;flex-wrap:nowrap;gap:.5rem;padding-bottom:.25rem;">
+             ${histosHTMLFinal}
+           </div>
+         </div>`;
+
     const _imgSrc = (() => {
       if(!imgName) return null;
       const lc = imgName.toLowerCase();
@@ -389,11 +448,26 @@ function renderTerminus(){
       ${buildTermImgSingle(imgName, dir)}
     </div>`;
 
-    return `<div class="term-row">${card}${histos}${img}</div>
-    ${buildTermGantt(ret, nom)}`;
+    return `<div class="term-row">${card}${histosWrap}${img}</div>
+    ${buildTermGantt(ret, nom, _groupData)}`;
   };
-
   el.innerHTML = `<div class="terminus-layout">
     ${termList.map((t,i) => (i>0?'<hr class="term-row-sep">':'')+buildRow(t)).join('')}
   </div>`;
 }
+
+/* ── Sélecteur de positions pour les histos terminus ── */
+window._setTermNPos = function(nomKey, n) {
+  if (!window._termNPos) window._termNPos = {};
+  window._termNPos[nomKey] = n;
+  renderTerminus();
+};
+
+
+/* ── Tooltip pills voies — style projet ── */
+
+window._setTermNPos = function(stateKey, n) {
+  if (!window._termNPos) window._termNPos = {};
+  window._termNPos[stateKey] = n;
+  renderTerminus();
+};
