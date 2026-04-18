@@ -397,9 +397,14 @@ let _fragmentsReady = false;
 async function loadAllFragments() {
   try {
     await Promise.all(Object.entries(_viewFiles).map(async ([name, url]) => {
-      const r   = await fetch(url);
-      const html = await r.text();
-      const el  = document.getElementById('view-' + name);
+      const r = await fetch(url + '?v=' + Date.now());
+      if(!r.ok) throw new Error(`Fragment introuvable : ${url} (${r.status})`);
+      let html = await r.text();
+      html = html.replace(
+        new RegExp('<!--\\s*Code injected by live-server[\\s\\S]*?<\\/script>', 'gi'),
+        ''
+      );
+      const el = document.getElementById('view-' + name);
       if(el) el.innerHTML = html;
     }));
     _fragmentsReady = true;

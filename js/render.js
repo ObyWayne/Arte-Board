@@ -5,8 +5,8 @@
    Non personnalisables via feuille COLOR (couleurs de convention technique)
 ═══════════════════════════════════════════════ */
 const INFRA_COL_HS  = '#e8453c'; // rouge — section hors service / fermée
-const INFRA_COL_VU  = '#6040b0'; // bleu  — voie unique
-const INFRA_COL_VSP = '#22c55e'; // vert  — site propre
+//const INFRA_COL_VU  = '#6040b0'; // bleu  — voie unique
+//const INFRA_COL_VSP = '#22c55e'; // vert  — site propre
 /* ═══════════════════════════════════════════════
    BUILD UI (scénarios dynamiques)
 ═══════════════════════════════════════════════ */
@@ -520,7 +520,7 @@ function render(){
     if(s.side==='DG' || s.side==='SU') return s.side;
     return isRetour ? (s.side==='D'?'G':'D') : s.side;
   };
-  const VSP_COL = INFRA_COL_VSP;
+  const VSP_COL = BRAND.primaire2;
 
   for(let i=0; i<N_ALL-1; i++){
     const y1 = scStY(i), y2 = scStY(i+1);
@@ -531,13 +531,13 @@ function render(){
       // Section hors-service : tireté rouge mono-voie centré
       h += scLine(SC_CX, y1, SC_CX, y2, INFRA_COL_HS, 2.5, '5,4');
     } else if(isVU(i)){
-      h += scLine(SC_CX, y1, SC_CX, y2, INFRA_COL_VU, 2, '6,4');
+      h += scLine(SC_CX, y1, SC_CX, y2, BRAND.primaire1, 2, '6,4');
       const mid=(y1+y2)/2;
-      h += `<polygon points="${SC_CX},${mid-5} ${SC_CX-3},${mid+2} ${SC_CX+3},${mid+2}" fill="${INFRA_COL_VU}" opacity=".6"/>`;
+      h += `<polygon points="${SC_CX},${mid-5} ${SC_CX-3},${mid+2} ${SC_CX+3},${mid+2}" fill="${BRAND.primaire1}" opacity=".6"/>`;
     } else {
       const vsp = getVspSide(i);
-      const colL = (vsp==='G'||vsp==='DG'||vsp==='SU') ? VSP_COL : '#a06bff';
-      const colR = (vsp==='D'||vsp==='DG'||vsp==='SU') ? VSP_COL : '#a06bff';
+      const colL = (vsp==='G'||vsp==='DG'||vsp==='SU') ? VSP_COL : BRAND.primaire1;
+      const colR = (vsp==='D'||vsp==='DG'||vsp==='SU') ? VSP_COL : BRAND.primaire1;
       const wL   = (vsp==='G'||vsp==='DG'||vsp==='SU') ? 3.5 : 2;
       const wR   = (vsp==='D'||vsp==='DG'||vsp==='SU') ? 3.5 : 2;
       h += scLine(SC_CX-SC_VD, y1, SC_CX-SC_VD, y2, colL, wL);
@@ -717,7 +717,7 @@ function render(){
         h+=`<g class="sc-infra" title="${el.desc||'Dépôt'}">`;
         h+=scLine(xM,y,xD2,y,'#f5a623',1.8);
         h+=`<rect x="${xD2-(cD>0?0:12)}" y="${y-6}" width="12" height="12" rx="2" fill="rgba(245,166,35,.15)" stroke="#f5a623" stroke-width="1.5"/>`;
-        h+=scTxt(xD2+cD*(-6+3), y+1, 'D', 6.5, '#f5a623','middle',700);
+        h+=scTxt(xD2+(cD>0?6:-6), y+1, 'D', 6.5, '#f5a623','middle',700);
         h+=`</g>`;
       }
       // ── CARREFOUR
@@ -758,13 +758,13 @@ function render(){
       hSt+=scLine(SC_CX-4,cy-4,SC_CX+4,cy+4,'#e8453c',1.5);
       hSt+=scLine(SC_CX+4,cy-4,SC_CX-4,cy+4,'#e8453c',1.5);
     } else if(isTProv){
-      hSt+=`<rect x="${px-2}" y="${py-2}" width="${SC_PW+4}" height="${SC_PH+4}" rx="${SC_PR+2}" fill="none" stroke="#3ecf6a" stroke-width="1" opacity=".4"/>`;
-      hSt+=`<rect x="${px}" y="${py}" width="${SC_PW}" height="${SC_PH}" rx="${SC_PR}" fill="#3ecf6a" stroke="#3ecf6a" stroke-width="1.5"/>`;
-      hSt+=scLine(SC_CX+SC_PW/2+2,cy-9,SC_CX+SC_PW/2+2,cy+5,'#3ecf6a',1.5);
-      hSt+=`<polygon points="${SC_CX+SC_PW/2+2},${cy-9} ${SC_CX+SC_PW/2+9},${cy-5} ${SC_CX+SC_PW/2+2},${cy-1}" fill="#3ecf6a"/>`;
+      hSt+=`<rect x="${px-2}" y="${py-2}" width="${SC_PW+4}" height="${SC_PH+4}" rx="${SC_PR+2}" fill="none" stroke=${BRAND.primaire2} stroke-width="1" opacity=".4"/>`;
+      hSt+=`<rect x="${px}" y="${py}" width="${SC_PW}" height="${SC_PH}" rx="${SC_PR}" fill=${BRAND.primaire2} stroke=${BRAND.primaire2} stroke-width="1.5"/>`;
+      hSt+=scLine(SC_CX+SC_PW/2+2,cy-9,SC_CX+SC_PW/2+2,cy+5,BRAND.primaire2,1.5);
+      hSt+=`<polygon points="${SC_CX+SC_PW/2+2},${cy-9} ${SC_CX+SC_PW/2+9},${cy-5} ${SC_CX+SC_PW/2+2},${cy-1}" fill=${BRAND.primaire2}/>`;
     } else if(isT){
-      hSt+=`<rect x="${px-2}" y="${py-2}" width="${SC_PW+4}" height="${SC_PH+4}" rx="${SC_PR+2}" fill="none" stroke="#3ecf6a" stroke-width="1" opacity=".35"/>`;
-      hSt+=`<rect x="${px}" y="${py}" width="${SC_PW}" height="${SC_PH}" rx="${SC_PR}" fill="#3ecf6a" stroke="#3ecf6a" stroke-width="1.5"/>`;
+      hSt+=`<rect x="${px-2}" y="${py-2}" width="${SC_PW+4}" height="${SC_PH+4}" rx="${SC_PR+2}" fill="none" stroke=${BRAND.primaire2} stroke-width="1" opacity=".35"/>`;
+      hSt+=`<rect x="${px}" y="${py}" width="${SC_PW}" height="${SC_PH}" rx="${SC_PR}" fill=${BRAND.primaire2} stroke=${BRAND.primaire2} stroke-width="1.5"/>`;
       const termLbl = i===0 ? 'AV' : 'AR';
       hSt+=scTxt(SC_CX, cy+1, termLbl, 7, '#0e1018', 'middle', 800);
     } else if(isImp){
@@ -895,8 +895,8 @@ function renderSchemaLegend(infra){
   const green  = BRAND.primaire2;
   const orange = BRAND.retour;
   const red    = INFRA_COL_HS;
-  const blue   = INFRA_COL_VU;
-  const vspCol = INFRA_COL_VSP;
+  const blue   = BRAND.primaire1;
+  const vspCol = BRAND.primaire2;
 
   // Chaque item : icône SVG (viewBox 0 0 24 12) + libellé
   const ICW = 24, ICH = 12, cy = ICH/2;
@@ -1020,7 +1020,7 @@ function renderSchemaLegend(infra){
         `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ICW} ${ICH}" width="${ICW}" height="${ICH}" style="flex-shrink:0;overflow:visible;">` +
           it.svgContent +
         `</svg>` +
-        `<span style="font-size:.46rem;font-family:'Barlow Condensed',sans-serif;font-weight:500;color:var(--text2);white-space:nowrap;">${it.label}</span>` +
+        `<span style="font-size:.52rem;font-family:'Barlow Condensed',sans-serif;font-weight:500;color:var(--text2);white-space:nowrap;">${it.label}</span>` +
       `</div>`
     ).join('') +
   `</div>`;
