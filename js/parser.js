@@ -1009,7 +1009,7 @@ function computeKPIs(scIdx){
     tRetourMin  = tronconKPIs.reduce((a,t)=>a+t.tR, 0);
     totalDistKm = tronconKPIs.reduce((a,t)=>a+t.dist, 0);
     flotteNec   = tronconKPIs.reduce((a,t)=>a+t.flotteNec, 0);
-    flotteTot   = Math.ceil(flotteNec / (1 - RESERVE_COEFF) - flotteNec);
+    flotteTot   = Math.ceil(flotteNec / (1 - RESERVE_COEFF));
     vitA        = +(totalDistKm/(tAllerMin/60)).toFixed(1);
     vitR        = +(totalDistKm/(tRetourMin/60)).toFixed(1);
     tCycleMin   = tAllerMin + tRetourMin + tRetCycleMin;
@@ -1018,7 +1018,7 @@ function computeKPIs(scIdx){
     const tr = sp.troncons[0];
     const k = kpiTroncon(tr, termSc.retA, termSc.retR);
     tAllerMin=k.tA; tRetourMin=k.tR; totalDistKm=k.dist;
-    flotteNec=k.flotteNec; flotteTot=Math.ceil(flotteNec / (1 - RESERVE_COEFF) - flotteNec);
+    flotteNec=k.flotteNec; flotteTot=Math.ceil(flotteNec / (1 - RESERVE_COEFF));
     vitA=k.vitA; vitR=k.vitR; tCycleMin=k.tCyc;
   } else {
     // NOMINAL
@@ -1032,7 +1032,7 @@ function computeKPIs(scIdx){
     tRetourMin = mR + dSR + LINE.stations.reduce((a,s)=>a+s.arretR,0)/60 - LINE.stations[0].arretR/60;
     tCycleMin  = tAllerMin + tRetourMin + tRetCycleMin;
     flotteNec  = Math.ceil(tCycleMin / sc.freqMin);
-    flotteTot  = Math.ceil(flotteNec / (1 - RESERVE_COEFF) - flotteNec);
+    flotteTot  = Math.ceil(flotteNec / (1 - RESERVE_COEFF));
     vitA = +(totalDistKm/(tAllerMin/60)).toFixed(1);
     vitR = +(totalDistKm/(tRetourMin/60)).toFixed(1);
   }
