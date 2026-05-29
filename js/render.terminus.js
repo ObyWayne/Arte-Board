@@ -95,7 +95,7 @@ function buildMiniHistoSVG(phaseSec, nPos){
     const bx  = cx - barW/2;
     const bh  = hToY(v);
     const by  = PAD.top + yScale(v);
-    const col = v > 100 ? '#000000' : occColorHex(v);
+    const col = v > 100 ? '#991b1b' : occColorHex(v);
 
     bars += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" opacity="0.88" rx="1.5"/>`;
     if(v > 4) bars += `<text x="${cx.toFixed(1)}" y="${(by-2).toFixed(1)}" text-anchor="middle" font-size="6" fill="${col}" font-weight="700">${v}%</text>`;

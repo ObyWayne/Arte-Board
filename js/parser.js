@@ -14,9 +14,9 @@ let BRAND = {
 /* ═══════════════════════════════════════════════
    CONSTANTES MÉTIER
 ═══════════════════════════════════════════════ */
-/* Coefficient de réserve flotte (ex: 1.15 = 15% de véhicules en réserve).
+/* Coefficient de réserve flotte (ex: 0.15 = 15% de véhicules en réserve).
    TODO: rendre configurable via le panneau Settings. */
-const RESERVE_COEFF = 1.15;
+const RESERVE_COEFF = 0.25;
 
 /* Variables globales implicites — déclarées ici pour clarté */
 let MT_IMAGES            = {};  // images marche type chargées depuis ZIP
@@ -1009,7 +1009,7 @@ function computeKPIs(scIdx){
     tRetourMin  = tronconKPIs.reduce((a,t)=>a+t.tR, 0);
     totalDistKm = tronconKPIs.reduce((a,t)=>a+t.dist, 0);
     flotteNec   = tronconKPIs.reduce((a,t)=>a+t.flotteNec, 0);
-    flotteTot   = Math.ceil(flotteNec * RESERVE_COEFF);
+    flotteTot   = Math.ceil(flotteNec / (1 - RESERVE_COEFF) - flotteNec);
     vitA        = +(totalDistKm/(tAllerMin/60)).toFixed(1);
     vitR        = +(totalDistKm/(tRetourMin/60)).toFixed(1);
     tCycleMin   = tAllerMin + tRetourMin + tRetCycleMin;
